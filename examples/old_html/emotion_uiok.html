@@ -1,0 +1,2434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <base href="../">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表情识别与健康建议系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eaeaea;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header h1 i {
+            color: #3498db;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .connection-status {
+            margin: 15px auto;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+            animation: pulse 2s infinite;
+        }
+
+        .status-checking {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .content-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .results-section {
+            flex: 2;
+            min-width: 300px;
+        }
+
+        .upload-area {
+            border: 3px dashed #3498db;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            background: #e8f4fc;
+            border-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .upload-area i {
+            font-size: 60px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+
+        .upload-area h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .upload-area p {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .upload-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .upload-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .upload-btn.monitor-btn {
+            background: #9b59b6;
+        }
+
+        .upload-btn.monitor-btn:hover {
+            background: #8e44ad;
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.3);
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            display: none;
+        }
+
+        .preview-container {
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        .preview-container img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-context {
+            margin-top: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #eaeaea;
+        }
+
+        .user-context h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .context-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .context-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .context-item label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .context-item select, .context-item input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .monitor-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 15px;
+            border: 2px solid #9b59b6;
+        }
+
+        .monitor-section h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .results-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #7f8c8d;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .emotion-chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+
+        .emotion-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+        }
+
+        .main-emotion {
+            text-align: center;
+            flex: 1;
+        }
+
+        .emotion-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+
+        .emotion-name {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .emotion-confidence {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+
+        .emotion-bar {
+            flex: 2;
+            padding: 0 30px;
+        }
+
+        .probability-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .emotion-label {
+            width: 100px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .probability-bar-container {
+            flex: 1;
+            height: 25px;
+            background: #ecf0f1;
+            border-radius: 12.5px;
+            overflow: hidden;
+            margin: 0 15px;
+        }
+
+        .probability-bar {
+            height: 100%;
+            border-radius: 12.5px;
+            transition: width 1s ease;
+        }
+
+        .probability-value {
+            width: 60px;
+            text-align: right;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .advice-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .advice-category {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #3498db;
+        }
+
+        .advice-category h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .advice-category h4 i {
+            color: #3498db;
+        }
+
+        .advice-list {
+            list-style: none;
+        }
+
+        .advice-list li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+            border-bottom: 1px solid #eee;
+        }
+
+        .advice-list li:last-child {
+            border-bottom: none;
+        }
+
+        .advice-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .risk-level {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .risk-low { background: #d4edda; color: #155724; }
+        .risk-medium { background: #fff3cd; color: #856404; }
+        .risk-high { background: #f8d7da; color: #721c24; }
+
+        .emergency-alert {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: pulse 2s infinite;
+        }
+
+        .server-info {
+            background: #e8f4fc;
+            border: 1px solid #3498db;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .server-info.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .connection-troubleshoot {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .connection-troubleshoot.active {
+            display: block;
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            border-top: 1px solid #eee;
+            margin-top: 30px;
+        }
+
+        /* 新增样式 */
+        .image-analysis-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .upload-btn.analyze-btn {
+            background: #2ecc71;
+        }
+
+        .upload-btn.analyze-btn:hover {
+            background: #27ae60;
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+
+        .upload-btn.ai-btn {
+            background: #ff6b6b;
+        }
+
+        .upload-btn.ai-btn:hover {
+            background: #ff5252;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .llm-analysis-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .llm-analysis-controls .upload-btn {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .llm-analysis-controls .days-input {
+            flex: 0 0 150px;
+        }
+
+        .days-input input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .analysis-stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .llm-response-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+
+        .llm-response-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+
+        .llm-response-section h5 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-analysis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eaeaea;
+        }
+
+        .model-tag {
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+
+        .usage-stats {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        @media (max-width: 768px) {
+            .content-wrapper {
+                flex-direction: column;
+            }
+
+            .emotion-summary {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .emotion-bar {
+                padding: 0;
+                width: 100%;
+            }
+
+            .context-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .llm-analysis-controls {
+                flex-direction: column;
+            }
+
+            .llm-analysis-controls .upload-btn,
+            .llm-analysis-controls .days-input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-smile"></i> 表情识别与健康建议系统</h1>
+            <p>上传面部图像，系统将识别您的情绪并提供个性化的健康建议和情绪管理策略</p>
+
+            <!-- 连接状态显示 -->
+            <div class="connection-status status-checking" id="connectionStatus">
+                <i class="fas fa-sync fa-spin"></i>
+                <span>正在检查API服务器连接...</span>
+            </div>
+        </div>
+
+        <!-- 服务器信息面板 -->
+        <div class="server-info" id="serverInfo">
+            <h4><i class="fas fa-server"></i> API服务器信息</h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
+                <div style="background: white; padding: 10px; border-radius: 5px;">
+                    <div style="font-weight: 600; color: #7f8c8d; font-size: 0.9rem;">服务器地址</div>
+                    <div style="color: #2c3e50;" id="serverUrl">http://localhost:5000</div>
+                </div>
+                <div style="background: white; padding: 10px; border-radius: 5px;">
+                    <div style="font-weight: 600; color: #7f8c8d; font-size: 0.9rem;">连接状态</div>
+                    <div style="color: #2c3e50;" id="serverStatus">检查中...</div>
+                </div>
+                <div style="background: white; padding: 10px; border-radius: 5px;">
+                    <div style="font-weight: 600; color: #7f8c8d; font-size: 0.9rem;">运行设备</div>
+                    <div style="color: #2c3e50;" id="serverDevice">未知</div>
+                </div>
+                <div style="background: white; padding: 10px; border-radius: 5px;">
+                    <div style="font-weight: 600; color: #7f8c8d; font-size: 0.9rem;">模型状态</div>
+                    <div style="color: #2c3e50;" id="serverModel">未知</div>
+                </div>
+            </div>
+
+            <!-- 连接故障排查 -->
+            <div class="connection-troubleshoot" id="connectionTroubleshoot">
+                <h5><i class="fas fa-tools"></i> 连接问题排查</h5>
+                <p>如果无法连接到API服务器，请检查：</p>
+                <ol>
+                    <li>确保API服务器已启动（运行 <code>start_api.bat</code>）</li>
+                    <li>检查端口5000是否被占用</li>
+                    <li>尝试刷新页面重新连接</li>
+                    <li>查看浏览器控制台是否有错误信息</li>
+                </ol>
+                <button class="upload-btn" onclick="checkConnection()" style="margin-top: 10px; padding: 8px 16px;">
+                    <i class="fas fa-redo"></i> 重新测试连接
+                </button>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- 左侧：上传区域 -->
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>上传面部图像</h3>
+                    <p>支持 JPG、PNG 格式，文件大小不超过 5MB</p>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i> 选择图像文件
+                    </button>
+                </div>
+
+                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+
+                <div class="file-info" id="fileInfo">
+                    <strong>已选择文件:</strong> <span id="fileName"></span><br>
+                    <strong>文件大小:</strong> <span id="fileSize"></span><br>
+                    <strong>文件类型:</strong> <span id="fileType"></span>
+                </div>
+
+                <div class="preview-container" id="previewContainer">
+                    <img id="imagePreview" alt="图像预览">
+                    <div class="image-analysis-buttons">
+                        <button class="upload-btn analyze-btn" onclick="analyzeSingleImage()" id="analyzeSingleBtn">
+                            <i class="fas fa-brain"></i> 分析情绪
+                        </button>
+                        <button class="upload-btn ai-btn" onclick="analyzeWithAI()" id="analyzeWithAIBtn">
+                            <i class="fas fa-robot"></i> 生成健康建议
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 用户上下文信息 -->
+                <div class="user-context">
+                    <h4><i class="fas fa-user-circle"></i> 个人信息（可选）</h4>
+                    <div class="context-grid">
+                        <div class="context-item">
+                            <label>年龄组:</label>
+                            <select id="ageGroup">
+                                <option value="child">儿童 (0-12岁)</option>
+                                <option value="teen">青少年 (13-19岁)</option>
+                                <option value="adult" selected>成人 (20-59岁)</option>
+                                <option value="elder">老年人 (60岁以上)</option>
+                            </select>
+                        </div>
+                        <div class="context-item">
+                            <label>是否有支持系统:</label>
+                            <select id="hasSupport">
+                                <option value="true" selected>是</option>
+                                <option value="false">否</option>
+                            </select>
+                        </div>
+                        <div class="context-item">
+                            <label>压力水平:</label>
+                            <select id="stressLevel">
+                                <option value="low">低</option>
+                                <option value="medium" selected>中</option>
+                                <option value="high">高</option>
+                            </select>
+                        </div>
+                        <div class="context-item">
+                            <label>是否首次使用:</label>
+                            <select id="isFirstTime">
+                                <option value="true">是</option>
+                                <option value="false" selected>否</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 实时监测面板 -->
+                <div class="monitor-section">
+                    <h4><i class="fas fa-video"></i> 实时情绪监测</h4>
+
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <button class="upload-btn monitor-btn" onclick="startMonitoring()" id="startMonitorBtn">
+                            <i class="fas fa-play"></i> 开始监测
+                        </button>
+                        <button class="upload-btn monitor-stop" onclick="stopMonitoring()" id="stopMonitorBtn" style="display: none;">
+                            <i class="fas fa-stop"></i> 停止监测
+                        </button>
+                        <button class="upload-btn monitor-btn" onclick="analyzeMonitoringHistory()">
+                            <i class="fas fa-chart-line"></i> 分析监测历史
+                        </button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div class="context-item">
+                            <label>抓拍间隔（秒）:</label>
+                            <input type="number" id="captureInterval" min="1" max="60" value="5">
+                        </div>
+                        <div class="context-item">
+                            <label>摄像头索引:</label>
+                            <input type="number" id="cameraIndex" min="0" max="5" value="0">
+                        </div>
+                    </div>
+
+                    <div id="monitorStatus" style="background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                        <p style="text-align: center; color: #7f8c8d;"><i class="fas fa-info-circle"></i> 监测器就绪</p>
+                    </div>
+                </div>
+
+                <button class="upload-btn monitor-btn" onclick="analyzeComprehensiveWithLLM()" style="width: 100%; margin-top: 20px;" id="comprehensiveAnalyzeBtn">
+                    <i class="fas fa-brain"></i> 综合情绪分析与建议（AI大模型版）
+                </button>
+            </div>
+
+            <!-- 右侧：结果区域 -->
+            <div class="results-section">
+                <div class="results-tabs">
+                    <button class="tab-btn active" onclick="switchTab('emotionTab')">
+                        <i class="fas fa-chart-bar"></i> 情绪分析
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('adviceTab')">
+                        <i class="fas fa-heart"></i> 健康建议
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('monitorTab')">
+                        <i class="fas fa-chart-line"></i> 监测分析
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('aiAnalysisTab')">
+                        <i class="fas fa-robot"></i> AI大模型分析
+                    </button>
+                </div>
+
+                <!-- 情绪分析标签页 -->
+                <div id="emotionTab" class="tab-content active">
+                    <div class="emotion-chart-container">
+                        <div class="emotion-summary">
+                            <div class="main-emotion">
+                                <div class="emotion-icon" id="mainEmotionIcon">😐</div>
+                                <div class="emotion-name" id="mainEmotionName">等待分析</div>
+                                <div class="emotion-confidence" id="mainEmotionConfidence">置信度: --%</div>
+                            </div>
+
+                            <div class="emotion-bar">
+                                <div id="probabilityBars">
+                                    <p style="text-align: center; color: #7f8c8d;">上传图像并点击分析按钮查看结果</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <canvas id="emotionChart"></canvas>
+                    </div>
+
+                    <div class="risk-indicator">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>风险评估:</strong>
+                            <span id="riskLevel" class="risk-level">未评估</span>
+                        </div>
+                        <div id="riskDescription">请先进行分析</div>
+                    </div>
+                </div>
+
+                <!-- 健康建议标签页 -->
+                <div id="adviceTab" class="tab-content">
+                    <div class="advice-section">
+                        <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-hands-helping"></i> 个性化健康建议
+                        </h3>
+
+                        <div class="advice-category">
+                            <h4><i class="fas fa-bolt"></i> 立即行动建议</h4>
+                            <ul class="advice-list" id="immediateAdvice">
+                                <li>请先上传图像并进行分析</li>
+                            </ul>
+                        </div>
+
+                        <div class="advice-category">
+                            <h4><i class="fas fa-calendar-day"></i> 日常贴士</h4>
+                            <ul class="advice-list" id="dailyTips">
+                                <li>请先上传图像并进行分析</li>
+                            </ul>
+                        </div>
+
+                        <div class="advice-category">
+                            <h4><i class="fas fa-seedling"></i> 长期建议</h4>
+                            <ul class="advice-list" id="longTermSuggestions">
+                                <li>请先上传图像并进行分析</li>
+                            </ul>
+                        </div>
+
+                        <div id="emergencyAlert" class="emergency-alert" style="display: none;">
+                            <i class="fas fa-exclamation-circle fa-2x"></i>
+                            <div>
+                                <strong>紧急提示</strong>
+                                <p id="emergencyText"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 监测分析标签页 -->
+                <div id="monitorTab" class="tab-content">
+                    <div class="advice-section">
+                        <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-chart-line"></i> 实时监测分析报告
+                        </h3>
+
+                        <div id="monitorAnalysisContent" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            <i class="fas fa-chart-bar fa-3x" style="color: #e0e0e0; margin-bottom: 20px;"></i>
+                            <p>请先进行实时监测并收集数据</p>
+                            <p>或点击"分析监测历史"按钮查看已有数据</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI大模型分析标签页 -->
+                <div id="aiAnalysisTab" class="tab-content">
+                    <div class="advice-section">
+                        <div class="ai-analysis-header">
+                            <h3 style="color: #2c3e50; margin: 0; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-robot"></i> AI大模型分析报告
+                            </h3>
+                            <div class="model-tag" id="modelTag">qwen-plus</div>
+                        </div>
+
+                        <div class="llm-analysis-controls">
+                            <button class="upload-btn" onclick="getComprehensiveAnalysis('health_advice')" id="healthAdviceBtn">
+                                <i class="fas fa-heartbeat"></i> 健康建议
+                            </button>
+                            <button class="upload-btn monitor-btn" onclick="getComprehensiveAnalysis('monitor_analysis')" id="monitorAnalysisBtn">
+                                <i class="fas fa-chart-line"></i> 监测分析
+                            </button>
+                            <button class="upload-btn ai-btn" onclick="getComprehensiveAnalysis('detailed_report')" id="detailedReportBtn">
+                                <i class="fas fa-file-medical-alt"></i> 详细报告
+                            </button>
+                            <div class="days-input">
+                                <label style="display: block; margin-bottom: 5px; color: #7f8c8d; font-size: 0.9rem;">分析天数:</label>
+                                <input type="number" id="llmAnalysisDays" min="1" max="365" value="7">
+                            </div>
+                        </div>
+
+                        <div id="aiAnalysisContent" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                            <i class="fas fa-robot fa-3x" style="color: #e0e0e0; margin-bottom: 20px;"></i>
+                            <p>请选择分析类型并点击相应按钮</p>
+                            <p>系统将调用阿里云百炼大模型生成专业分析报告</p>
+                        </div>
+
+                        <div id="llmAnalysisStats" class="analysis-stats" style="display: none;">
+                            <h4><i class="fas fa-chart-bar"></i> 分析统计</h4>
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="llmTotalSamples">0</div>
+                                    <div class="stat-label">分析样本</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="llmAnalysisType">未知</div>
+                                    <div class="stat-label">分析类型</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="llmTimeRange">未知</div>
+                                    <div class="stat-label">时间范围</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="llmStability">0%</div>
+                                    <div class="stat-label">情绪稳定性</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>表情识别与健康建议系统 v4.0 | 基于深度学习的情感识别 | 提供心理健康支持</p>
+            <p>注意：本系统仅供学习和参考，如有严重情绪问题请及时寻求专业心理帮助</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                服务器状态: <span id="footerStatus">检查中...</span> |
+                最后更新: <span id="lastUpdate">--</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- 状态提示栏 -->
+    <div id="statusBar" class="status-bar"></div>
+
+    <script>
+        // 全局变量
+        let emotionChart = null;
+        let monitorChart = null;
+        let currentImageData = null;
+        let isConnected = false;
+        let monitorInterval = null;
+        const API_BASE_URL = 'http://localhost:7860';
+
+        // 情绪图标映射
+        const emotionIcons = {
+            'anger': '😠',
+            'disgust': '🤢',
+            'fear': '😨',
+            'happy': '😊',
+            'sad': '😢',
+            'surprised': '😲'
+        };
+
+        // 情绪颜色映射
+        const emotionColors = {
+            'anger': '#e74c3c',
+            'disgust': '#27ae60',
+            'fear': '#8e44ad',
+            'happy': '#f39c12',
+            'sad': '#3498db',
+            'surprised': '#1abc9c'
+        };
+
+        // 情绪中文名称映射
+        const emotionChinese = {
+            'anger': '愤怒',
+            'disgust': '厌恶',
+            'fear': '恐惧',
+            'happy': '快乐',
+            'sad': '悲伤',
+            'surprised': '惊讶'
+        };
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("页面加载完成，初始化系统...");
+
+            // 隐藏预览容器
+            document.getElementById('previewContainer').style.display = 'none';
+            document.getElementById('fileInfo').style.display = 'none';
+
+            // 检查关键元素是否存在
+            checkRequiredElements();
+
+            // 检查API连接
+            checkConnection();
+
+            // 设置自动连接检查（每30秒一次）
+            setInterval(checkConnection, 30000);
+
+            // 更新最后更新时间
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+
+            // 检查监测状态
+            setTimeout(checkMonitorStatus, 1000);
+
+            // 每10秒更新一次监测状态
+            setInterval(checkMonitorStatus, 10000);
+        });
+
+        function checkRequiredElements() {
+            const elements = [
+                'aiAnalysisContent',
+                'healthAdviceBtn',
+                'monitorAnalysisBtn',
+                'detailedReportBtn',
+                'llmAnalysisDays',
+                'llmTotalSamples',
+                'llmAnalysisType',
+                'llmTimeRange',
+                'llmAnalysisStats'
+            ];
+
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                console.log(`元素检查: ${id} - ${element ? '✅ 存在' : '❌ 不存在'}`);
+            });
+        }
+
+        // 检查API连接
+        async function checkConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const serverInfo = document.getElementById('serverInfo');
+            const troubleshootDiv = document.getElementById('connectionTroubleshoot');
+            const footerStatus = document.getElementById('footerStatus');
+
+            // 显示检查状态
+            statusDiv.className = 'connection-status status-checking';
+            statusDiv.innerHTML = '<i class="fas fa-sync fa-spin"></i><span>正在检查API服务器连接...</span>';
+            footerStatus.textContent = '检查连接中...';
+            footerStatus.style.color = '#856404';
+
+            try {
+                // 尝试连接API
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    timeout: 5000
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // 更新连接状态
+                    isConnected = true;
+                    statusDiv.className = 'connection-status status-connected';
+                    statusDiv.innerHTML = `<i class="fas fa-check-circle"></i><span>✅ 已连接到API服务器</span>`;
+
+                    // 更新服务器信息
+                    document.getElementById('serverUrl').textContent = API_BASE_URL;
+                    document.getElementById('serverStatus').textContent = '已连接';
+                    document.getElementById('serverStatus').style.color = '#155724';
+                    document.getElementById('serverDevice').textContent = data.device || 'CPU';
+                    document.getElementById('serverModel').textContent = data.model_loaded ? '已加载' : '未加载';
+
+                    // 显示服务器信息
+                    serverInfo.classList.add('active');
+                    troubleshootDiv.classList.remove('active');
+
+                    // 更新页脚状态
+                    footerStatus.textContent = '已连接';
+                    footerStatus.style.color = '#155724';
+
+                    // 显示成功消息
+                    showStatus('已成功连接到API服务器', 'success');
+
+                    console.log('API服务器信息:', data);
+
+                } else {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+
+            } catch (error) {
+                // 连接失败
+                isConnected = false;
+                statusDiv.className = 'connection-status status-disconnected';
+                statusDiv.innerHTML = `<i class="fas fa-times-circle"></i><span>❌ 无法连接到API服务器</span>`;
+
+                // 更新服务器信息
+                document.getElementById('serverStatus').textContent = '连接失败';
+                document.getElementById('serverStatus').style.color = '#721c24';
+                document.getElementById('serverDevice').textContent = '未知';
+                document.getElementById('serverModel').textContent = '未知';
+
+                // 显示服务器信息和故障排查
+                serverInfo.classList.add('active');
+                troubleshootDiv.classList.add('active');
+
+                // 更新页脚状态
+                footerStatus.textContent = '连接失败';
+                footerStatus.style.color = '#721c24';
+
+                // 显示错误消息
+                showStatus(`连接失败: ${error.message}`, 'error');
+
+                console.error('API连接错误:', error);
+            }
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 检查文件类型
+            if (!file.type.startsWith('image/')) {
+                showStatus('请选择图像文件 (JPG, PNG等)', 'error');
+                return;
+            }
+
+            // 检查文件大小 (限制5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showStatus('文件过大，请选择小于5MB的图像', 'error');
+                return;
+            }
+
+            // 显示文件信息
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileType').textContent = file.type;
+            document.getElementById('fileInfo').style.display = 'block';
+
+            // 预览图像
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewImg = document.getElementById('imagePreview');
+                previewImg.src = e.target.result;
+                document.getElementById('previewContainer').style.display = 'block';
+                currentImageData = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 切换标签页
+        function switchTab(tabId) {
+            // 移除所有标签页的active类
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // 激活当前标签页
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // 显示状态消息
+        function showStatus(message, type = 'success') {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+            statusBar.className = `status-bar status-${type}`;
+            statusBar.style.display = 'block';
+
+            setTimeout(() => {
+                statusBar.style.display = 'none';
+            }, 3000);
+        }
+
+        // ================ 图片分析功能 ================
+
+        // 分析单张图片（模型分析）
+        async function analyzeSingleImage() {
+            if (!currentImageData) {
+                showStatus('请先上传图像', 'error');
+                return;
+            }
+
+            if (!isConnected) {
+                showStatus('请先确保API服务器已连接', 'error');
+                checkConnection();
+                return;
+            }
+
+            const analyzeBtn = document.getElementById('analyzeSingleBtn');
+            const originalText = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = '<div class="loading"></div> 分析中...';
+            analyzeBtn.disabled = true;
+
+            try {
+                // 将base64数据转换为blob
+                const base64Data = currentImageData.split(',')[1];
+                const blob = b64toBlob(base64Data, 'image/jpeg');
+
+                // 创建FormData
+                const formData = new FormData();
+                formData.append('image', blob, 'uploaded_image.jpg');
+
+                showStatus('正在分析单张图像情绪...', 'success');
+
+                // 发送请求到/predict端点
+                const response = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    body: formData,
+                    timeout: 15000
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 更新界面显示结果
+                    updateEmotionDisplay(result);
+                    createEmotionChart(result.probabilities);
+
+                    // 显示详细结果
+                    document.getElementById('probabilityBars').innerHTML = `
+                        <div style="text-align: center; padding: 10px; background: #d4edda; border-radius: 10px; margin-bottom: 15px;">
+                            <strong>单张图片分析完成</strong><br>
+                            主要情绪: ${result.emotion_zh} (${(result.confidence * 100).toFixed(1)}%)
+                        </div>
+                    `;
+
+                    // 重新生成概率条
+                    Object.entries(result.probabilities).forEach(([emo, prob]) => {
+                        const percentage = (prob * 100).toFixed(1);
+                        const barWidth = (prob * 100).toFixed(1);
+
+                        const barHtml = `
+                            <div class="probability-item">
+                                <div class="emotion-label">${emotionIcons[emo]} ${emotionChinese[emo] || emo}</div>
+                                <div class="probability-bar-container">
+                                    <div class="probability-bar"
+                                         style="width: ${barWidth}%; background-color: ${emotionColors[emo] || '#3498db'}">
+                                    </div>
+                                </div>
+                                <div class="probability-value">${percentage}%</div>
+                            </div>
+                        `;
+
+                        document.getElementById('probabilityBars').innerHTML += barHtml;
+                    });
+
+                    showStatus('单张图片情绪分析完成！', 'success');
+
+                    // 切换到情绪分析标签页
+                    switchTab('emotionTab');
+                } else {
+                    throw new Error(result.error || '分析失败');
+                }
+
+            } catch (error) {
+                showStatus(`分析失败: ${error.message}`, 'error');
+                console.error('单张图片分析错误:', error);
+            } finally {
+                analyzeBtn.innerHTML = originalText;
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // 使用AI深度分析单张图片
+        async function analyzeWithAI() {
+            if (!currentImageData) {
+                showStatus('请先上传图像', 'error');
+                return;
+            }
+
+            const analyzeBtn = document.getElementById('analyzeWithAIBtn');
+            const originalText = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = '<div class="loading"></div> AI分析中...';
+            analyzeBtn.disabled = true;
+
+            try {
+                // 先进行情绪识别
+                const base64Data = currentImageData.split(',')[1];
+                const blob = b64toBlob(base64Data, 'image/jpeg');
+
+                const formData = new FormData();
+                formData.append('image', blob, 'uploaded_image.jpg');
+
+                // 获取用户上下文
+                const userContext = {
+                    age_group: document.getElementById('ageGroup').value,
+                    has_support_system: document.getElementById('hasSupport').value === 'true',
+                    stress_level: document.getElementById('stressLevel').value,
+                    is_first_time: document.getElementById('isFirstTime').value === 'true'
+                };
+                formData.append('user_context', JSON.stringify(userContext));
+
+                showStatus('正在使用AI深度分析图像...', 'success');
+
+                // 发送请求到/predict_with_advice端点
+                const response = await fetch(`${API_BASE_URL}/predict_with_advice`, {
+                    method: 'POST',
+                    body: formData,
+                    timeout: 20000
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 更新所有显示
+                    updateEmotionDisplay(result.prediction);
+                    updateAdviceDisplay(result.health_advice_report);
+                    createEmotionChart(result.prediction.probabilities);
+
+                    showStatus('AI深度分析完成！', 'success');
+
+                    // 切换到健康建议标签页
+                    switchTab('adviceTab');
+                } else {
+                    throw new Error(result.error || 'AI分析失败');
+                }
+
+            } catch (error) {
+                showStatus(`AI分析失败: ${error.message}`, 'error');
+                console.error('AI分析错误:', error);
+            } finally {
+                analyzeBtn.innerHTML = originalText;
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // ================ 综合分析功能 ================
+
+        // 综合情绪分析与建议（调用大模型）
+        async function analyzeComprehensiveWithLLM() {
+            const confirmAction = confirm('即将进行综合情绪分析。\n\n这将分析所有历史数据并生成综合报告。\n是否继续？');
+            if (!confirmAction) return;
+
+            const analyzeBtn = document.getElementById('comprehensiveAnalyzeBtn');
+            const originalText = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = '<div class="loading"></div> 综合分析中...';
+            analyzeBtn.disabled = true;
+
+            try {
+                showStatus('正在开始综合情绪分析...', 'success');
+
+                // 默认先获取健康建议
+                await getComprehensiveAnalysis('health_advice');
+
+                // 切换到AI分析标签页
+                switchTab('aiAnalysisTab');
+
+            } catch (error) {
+                showStatus(`综合分析失败: ${error.message}`, 'error');
+                console.error('综合分析错误:', error);
+            } finally {
+                analyzeBtn.innerHTML = originalText;
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // 获取综合分析
+        async function getComprehensiveAnalysis(analysisType) {
+            const days = parseInt(document.getElementById('llmAnalysisDays').value) || 7;
+
+            // 获取按钮元素
+            const healthAdviceBtn = document.getElementById('healthAdviceBtn');
+            const monitorAnalysisBtn = document.getElementById('monitorAnalysisBtn');
+            const detailedReportBtn = document.getElementById('detailedReportBtn');
+
+            // 检查元素是否存在
+            if (!healthAdviceBtn || !monitorAnalysisBtn || !detailedReportBtn) {
+                console.error("分析按钮元素不存在");
+                showStatus("分析按钮未找到，请刷新页面", "error");
+                return;
+            }
+
+            // 保存原始文本
+            const originalTexts = {
+                healthAdviceBtn: healthAdviceBtn.innerHTML,
+                monitorAnalysisBtn: monitorAnalysisBtn.innerHTML,
+                detailedReportBtn: detailedReportBtn.innerHTML
+            };
+
+            // 获取当前按钮
+            let currentBtn;
+            if (analysisType === 'health_advice') currentBtn = healthAdviceBtn;
+            else if (analysisType === 'monitor_analysis') currentBtn = monitorAnalysisBtn;
+            else if (analysisType === 'detailed_report') currentBtn = detailedReportBtn;
+
+            if (!currentBtn) {
+                console.error("当前按钮未找到:", analysisType);
+                return;
+            }
+
+            // 更新按钮状态
+            healthAdviceBtn.disabled = true;
+            monitorAnalysisBtn.disabled = true;
+            detailedReportBtn.disabled = true;
+            currentBtn.innerHTML = '<div class="loading"></div> 分析中...';
+
+            try {
+                showStatus(`正在生成${getAnalysisTypeName(analysisType)}...`, 'success');
+
+                const response = await fetch(`${API_BASE_URL}/comprehensive_analysis`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        use_history: true,
+                        analysis_type: analysisType,
+                        days: days
+                    }),
+                    timeout: 30000
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 显示分析结果
+                    displayLLMAnalysis(result, analysisType);
+                    showStatus(`${getAnalysisTypeName(analysisType)}生成完成！`, 'success');
+                } else {
+                    throw new Error(result.error || '分析失败');
+                }
+
+            } catch (error) {
+                console.error('综合分析错误:', error);
+                showStatus(`生成${getAnalysisTypeName(analysisType)}失败: ${error.message}`, 'error');
+
+                // 在错误时显示错误信息
+                const aiAnalysisContent = document.getElementById('aiAnalysisContent');
+                if (aiAnalysisContent) {
+                    aiAnalysisContent.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #721c24;">
+                            <i class="fas fa-exclamation-triangle fa-3x" style="margin-bottom: 20px;"></i>
+                            <h3>分析失败</h3>
+                            <p>${error.message}</p>
+                            <p style="margin-top: 15px; font-size: 0.9em; color: #7f8c8d;">
+                                请检查API服务器是否正常运行，并确保有足够的历史数据。
+                            </p>
+                            <button onclick="checkConnection()" class="upload-btn" style="margin-top: 15px;">
+                                <i class="fas fa-redo"></i> 重新测试连接
+                            </button>
+                        </div>
+                    `;
+                }
+            } finally {
+                // 恢复按钮状态
+                if (healthAdviceBtn) {
+                    healthAdviceBtn.innerHTML = originalTexts.healthAdviceBtn;
+                    healthAdviceBtn.disabled = false;
+                }
+                if (monitorAnalysisBtn) {
+                    monitorAnalysisBtn.innerHTML = originalTexts.monitorAnalysisBtn;
+                    monitorAnalysisBtn.disabled = false;
+                }
+                if (detailedReportBtn) {
+                    detailedReportBtn.innerHTML = originalTexts.detailedReportBtn;
+                    detailedReportBtn.disabled = false;
+                }
+            }
+        }
+
+        // 显示大模型分析结果
+        function displayLLMAnalysis(result, analysisType) {
+            console.log("显示AI分析结果", result, analysisType);
+
+            // 获取所有需要的元素
+            const aiAnalysisContent = document.getElementById('aiAnalysisContent');
+            const llmTotalSamples = document.getElementById('llmTotalSamples');
+            const llmAnalysisType = document.getElementById('llmAnalysisType');
+            const llmTimeRange = document.getElementById('llmTimeRange');
+            const llmStability = document.getElementById('llmStability');
+            const llmAnalysisStats = document.getElementById('llmAnalysisStats');
+            const modelTag = document.getElementById('modelTag');
+
+            // 检查所有必需的元素是否存在
+            if (!aiAnalysisContent) {
+                console.error("错误: aiAnalysisContent元素不存在");
+                showStatus("AI分析显示区域未找到", "error");
+                return;
+            }
+
+            const data = result.data || {};
+            const llmResponse = data.llm_response || {};
+            const algorithmAnalysis = data.algorithm_analysis || {};
+            const summary = data.summary || {};
+            const usingAlgorithm = data.using_algorithm || false;
+
+            // 更新统计信息（如果元素存在）
+            if (llmTotalSamples) {
+                llmTotalSamples.textContent = summary.total_samples || 0;
+            }
+
+            if (llmAnalysisType) {
+                llmAnalysisType.textContent = getAnalysisTypeName(analysisType);
+            }
+
+            if (llmTimeRange) {
+                const timeRange = summary.time_range || {};
+                const startTime = timeRange.start ? timeRange.start.substring(0, 10) : '未知';
+                const endTime = timeRange.end ? timeRange.end.substring(0, 10) : '未知';
+                llmTimeRange.textContent = `${startTime} 至 ${endTime}`;
+            }
+
+            if (llmStability) {
+                llmStability.textContent = `${summary.stability_score?.toFixed(1) || '0'}%`;
+            }
+
+            if (llmAnalysisStats) {
+                llmAnalysisStats.style.display = 'block';
+            }
+
+            if (modelTag) {
+                modelTag.textContent = llmResponse.model || '算法生成';
+                if (usingAlgorithm) {
+                    modelTag.style.background = '#ff6b6b';
+                    modelTag.innerHTML = '<i class="fas fa-calculator"></i> 算法生成';
+                }
+            }
+
+            let content = '';
+
+            // 获取分析内容
+            let displayContent = '';
+            let isAlgorithmBased = usingAlgorithm;
+
+            if (llmResponse.success && llmResponse.raw_response) {
+                // 大模型响应
+                displayContent = llmResponse.raw_response;
+                isAlgorithmBased = false;
+            } else if (algorithmAnalysis && Object.keys(algorithmAnalysis).length > 0) {
+                // 算法生成的分析
+                displayContent = formatAlgorithmAnalysis(algorithmAnalysis, analysisType);
+                isAlgorithmBased = true;
+            } else if (llmResponse.fallback) {
+                // 备用算法分析
+                displayContent = formatAlgorithmAnalysis(llmResponse.fallback, analysisType);
+                isAlgorithmBased = true;
+            } else {
+                displayContent = '分析结果不可用，请检查数据或稍后重试。';
+            }
+
+            // 添加使用情况统计
+            let usageInfo = '';
+            if (llmResponse.usage && !isAlgorithmBased) {
+                usageInfo = `
+                    <div class="usage-stats">
+                        <i class="fas fa-chart-bar"></i> 使用统计:
+                        总Token: ${llmResponse.usage.total_tokens || 0} |
+                        提示Token: ${llmResponse.usage.prompt_tokens || 0} |
+                        生成Token: ${llmResponse.usage.completion_tokens || 0}
+                    </div>
+                `;
+            }
+
+            // 添加算法生成提示
+            let algorithmNote = '';
+            if (isAlgorithmBased) {
+                algorithmNote = `
+                    <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ffeaa7;">
+                        <i class="fas fa-info-circle"></i> 此报告由算法生成（大模型暂不可用）。如需更专业的分析，请确保配置阿里云百炼API Key。
+                    </div>
+                `;
+            }
+
+            // 构建显示内容
+            content = `
+                <div style="background: #e8f4fc; padding: 25px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #3498db;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: #2c3e50; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-robot"></i> ${getAnalysisTypeName(analysisType)} - ${isAlgorithmBased ? '算法分析' : 'AI大模型分析'}
+                        </h4>
+                        <span style="background: ${isAlgorithmBased ? '#ff6b6b' : '#3498db'}; color: white; padding: 5px 10px; border-radius: 15px; font-size: 0.9em;">
+                            ${isAlgorithmBased ? '<i class="fas fa-calculator"></i> 算法生成' : (llmResponse.model || 'qwen-plus')}
+                        </span>
+                    </div>
+
+                    ${algorithmNote}
+                    ${usageInfo}
+
+                    <div class="llm-response-box">
+                        ${displayContent}
+                    </div>
+                </div>
+
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+                    <h4><i class="fas fa-chart-pie"></i> 情绪数据概览</h4>
+                    <div style="margin-top: 15px;">
+                        ${generateEmotionDistributionHTML(summary.emotion_distribution || {}, summary.total_samples || 1)}
+                    </div>
+                </div>
+            `;
+
+            // 设置内容
+            aiAnalysisContent.innerHTML = content;
+            console.log("AI分析内容已更新");
+        }
+
+        // 格式化算法分析结果
+        function formatAlgorithmAnalysis(algorithmResult, analysisType) {
+            let html = '';
+
+            if (analysisType === 'health_advice') {
+                html += `<h5>${algorithmResult.overall_assessment || '健康建议报告'}</h5>`;
+
+                if (algorithmResult.risk_assessment) {
+                    html += `<p><strong>风险评估:</strong> ${algorithmResult.risk_assessment.level} - ${algorithmResult.risk_assessment.description}</p>`;
+                }
+
+                if (algorithmResult.immediate_actions && algorithmResult.immediate_actions.length > 0) {
+                    html += `<h6 style="margin-top: 15px; color: #e74c3c;">立即行动:</h6><ul>`;
+                    algorithmResult.immediate_actions.forEach(action => {
+                        html += `<li>${action}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+
+                if (algorithmResult.daily_tips && algorithmResult.daily_tips.length > 0) {
+                    html += `<h6 style="margin-top: 15px; color: #2ecc71;">日常贴士:</h6><ul>`;
+                    algorithmResult.daily_tips.forEach(tip => {
+                        html += `<li>${tip}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+
+                if (algorithmResult.long_term_suggestions && algorithmResult.long_term_suggestions.length > 0) {
+                    html += `<h6 style="margin-top: 15px; color: #3498db;">长期建议:</h6><ul>`;
+                    algorithmResult.long_term_suggestions.forEach(suggestion => {
+                        html += `<li>${suggestion}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+            } else if (analysisType === 'monitor_analysis') {
+                html += `<h5>${algorithmResult.summary || '监测分析报告'}</h5>`;
+
+                if (algorithmResult.key_findings && algorithmResult.key_findings.length > 0) {
+                    html += `<h6 style="margin-top: 15px;">主要发现:</h6><ul>`;
+                    algorithmResult.key_findings.forEach(finding => {
+                        html += `<li>${finding}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+
+                if (algorithmResult.recommendations && algorithmResult.recommendations.length > 0) {
+                    html += `<h6 style="margin-top: 15px;">建议:</h6><ul>`;
+                    algorithmResult.recommendations.forEach(rec => {
+                        html += `<li>${rec}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+            } else if (analysisType === 'detailed_report') {
+                html += `<h5>${algorithmResult.title || '详细情绪分析报告'}</h5>`;
+                html += `<p>${algorithmResult.executive_summary || ''}</p>`;
+
+                if (algorithmResult.detailed_analysis && algorithmResult.detailed_analysis.length > 0) {
+                    html += `<h6 style="margin-top: 15px;">详细分析:</h6><ul>`;
+                    algorithmResult.detailed_analysis.forEach(item => {
+                        html += `<li>${item}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+
+                if (algorithmResult.professional_insights && algorithmResult.professional_insights.length > 0) {
+                    html += `<h6 style="margin-top: 15px;">专业见解:</h6><ul>`;
+                    algorithmResult.professional_insights.forEach(insight => {
+                        html += `<li>${insight}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+
+                if (algorithmResult.recommendations && algorithmResult.recommendations.length > 0) {
+                    html += `<h6 style="margin-top: 15px;">建议:</h6><ul>`;
+                    algorithmResult.recommendations.forEach(rec => {
+                        html += `<li>${rec}</li>`;
+                    });
+                    html += `</ul>`;
+                }
+            }
+
+            // 添加算法生成标识
+            if (algorithmResult.algorithm_based) {
+                html += `<p style="margin-top: 20px; font-size: 0.9em; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 10px;">
+                    <i class="fas fa-calculator"></i> 此报告由算法自动生成
+                </p>`;
+            }
+
+            return html || '<p>无分析内容</p>';
+        }
+
+        // 辅助函数
+        function getAnalysisTypeName(type) {
+            const names = {
+                'health_advice': '健康建议',
+                'monitor_analysis': '监测分析',
+                'detailed_report': '详细报告'
+            };
+            return names[type] || type;
+        }
+
+        // ================ 完整的前端 getComprehensiveAnalysis 函数 ================
+async function getComprehensiveAnalysis(analysisType) {
+    const days = parseInt(document.getElementById('llmAnalysisDays').value) || 7;
+
+    // 获取用户上下文信息
+    const userContext = {
+        age_group: document.getElementById('ageGroup').value,
+        stress_level: document.getElementById('stressLevel').value,
+        has_support_system: document.getElementById('hasSupport').value === 'true',
+        is_first_time: document.getElementById('isFirstTime').value === 'true'
+    };
+
+    // 尝试获取可选字段（如果存在）
+    try {
+        const occupationElem = document.getElementById('occupation');
+        if (occupationElem) {
+            userContext.occupation = occupationElem.value;
+        }
+
+        const recentActivityElem = document.getElementById('recentActivity');
+        if (recentActivityElem && recentActivityElem.value.trim()) {
+            userContext.recent_activity = recentActivityElem.value.trim();
+        }
+    } catch (error) {
+        console.log("可选用户信息字段不存在，使用基础信息");
+    }
+
+    // 获取按钮元素
+    const healthAdviceBtn = document.getElementById('healthAdviceBtn');
+    const monitorAnalysisBtn = document.getElementById('monitorAnalysisBtn');
+    const detailedReportBtn = document.getElementById('detailedReportBtn');
+
+    // 检查元素是否存在
+    if (!healthAdviceBtn || !monitorAnalysisBtn || !detailedReportBtn) {
+        console.error("分析按钮元素不存在");
+        showStatus("分析按钮未找到，请刷新页面", "error");
+        return;
+    }
+
+    // 保存原始文本
+    const originalTexts = {
+        healthAdviceBtn: healthAdviceBtn.innerHTML,
+        monitorAnalysisBtn: monitorAnalysisBtn.innerHTML,
+        detailedReportBtn: detailedReportBtn.innerHTML
+    };
+
+    // 获取当前按钮
+    let currentBtn;
+    if (analysisType === 'health_advice') currentBtn = healthAdviceBtn;
+    else if (analysisType === 'monitor_analysis') currentBtn = monitorAnalysisBtn;
+    else if (analysisType === 'detailed_report') currentBtn = detailedReportBtn;
+
+    if (!currentBtn) {
+        console.error("当前按钮未找到:", analysisType);
+        return;
+    }
+
+    // 更新按钮状态
+    healthAdviceBtn.disabled = true;
+    monitorAnalysisBtn.disabled = true;
+    detailedReportBtn.disabled = true;
+    currentBtn.innerHTML = '<div class="loading"></div> 分析中...';
+
+    try {
+        showStatus(`正在生成${getAnalysisTypeName(analysisType)}...`, 'success');
+
+        // 构建请求体
+        const requestBody = {
+            use_history: true,
+            analysis_type: analysisType,
+            days: days,
+            user_context: userContext  // 包含用户上下文
+        };
+
+        console.log("发送综合分析请求:", {
+            analysisType: analysisType,
+            days: days,
+            userContext: userContext
+        });
+
+        const response = await fetch(`${API_BASE_URL}/comprehensive_analysis`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody),
+            timeout: 45000  // 45秒超时
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`服务器错误: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            // 显示分析结果
+            displayLLMAnalysis(result, analysisType);
+            showStatus(`${getAnalysisTypeName(analysisType)}生成完成！`, 'success');
+
+            // 记录成功的分析历史
+            const analysisHistory = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+            analysisHistory.unshift({
+                timestamp: new Date().toISOString(),
+                type: analysisType,
+                days: days,
+                userContext: userContext,
+                success: true
+            });
+
+            // 只保留最近10条记录
+            if (analysisHistory.length > 10) {
+                analysisHistory.pop();
+            }
+
+            localStorage.setItem('analysisHistory', JSON.stringify(analysisHistory));
+
+        } else {
+            throw new Error(result.error || '分析失败');
+        }
+
+    } catch (error) {
+        console.error('综合分析错误:', error);
+        showStatus(`生成${getAnalysisTypeName(analysisType)}失败: ${error.message}`, 'error');
+
+        // 显示用户友好的错误信息
+        const aiAnalysisContent = document.getElementById('aiAnalysisContent');
+        if (aiAnalysisContent) {
+            let errorMessage = error.message;
+
+            // 处理特定错误类型
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                errorMessage = '网络连接失败，请检查API服务器是否运行';
+            } else if (error.message.includes('timeout')) {
+                errorMessage = '请求超时，请稍后重试';
+            } else if (error.message.includes('500')) {
+                errorMessage = '服务器内部错误，请检查服务器日志';
+            }
+
+            aiAnalysisContent.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: #f8d7da; border-radius: 12px; border: 2px solid #f5c6cb;">
+                    <i class="fas fa-exclamation-triangle fa-3x" style="color: #721c24; margin-bottom: 20px;"></i>
+                    <h3 style="color: #721c24;">分析失败</h3>
+                    <p style="color: #721c24;">${errorMessage}</p>
+
+                    <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; text-align: left;">
+                        <h5 style="margin-bottom: 10px; color: #2c3e50;">解决建议:</h5>
+                        <ol style="color: #7f8c8d; padding-left: 20px;">
+                            <li>检查API服务器是否运行 (运行 start_api.bat)</li>
+                            <li>确保端口5000未被占用</li>
+                            <li>检查是否有足够的历史数据</li>
+                            <li>尝试减少分析天数或等待网络恢复</li>
+                        </ol>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="checkConnection()" class="upload-btn" style="padding: 8px 16px;">
+                            <i class="fas fa-redo"></i> 测试连接
+                        </button>
+                        <button onclick="analyzeMonitoringHistory()" class="upload-btn monitor-btn" style="padding: 8px 16px;">
+                            <i class="fas fa-chart-line"></i> 查看监测数据
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 15px; font-size: 0.9em; color: #7f8c8d;">
+                        <p>使用信息: 年龄组-${userContext.age_group}, 压力-${userContext.stress_level}, 支持系统-${userContext.has_support_system ? '有' : '无'}</p>
+                    </div>
+                </div>
+            `;
+        }
+    } finally {
+        // 恢复按钮状态
+        if (healthAdviceBtn) {
+            healthAdviceBtn.innerHTML = originalTexts.healthAdviceBtn;
+            healthAdviceBtn.disabled = false;
+        }
+        if (monitorAnalysisBtn) {
+            monitorAnalysisBtn.innerHTML = originalTexts.monitorAnalysisBtn;
+            monitorAnalysisBtn.disabled = false;
+        }
+        if (detailedReportBtn) {
+            detailedReportBtn.innerHTML = originalTexts.detailedReportBtn;
+            detailedReportBtn.disabled = false;
+        }
+    }
+}
+
+// 辅助函数：获取分析类型名称
+function getAnalysisTypeName(type) {
+    const names = {
+        'health_advice': '健康建议',
+        'monitor_analysis': '监测分析',
+        'detailed_report': '详细报告'
+    };
+    return names[type] || type;
+}
+
+        function generateEmotionDistributionHTML(distribution, total) {
+            if (!distribution || total === 0) return '<p>暂无数据</p>';
+
+            let html = '';
+            Object.entries(distribution).forEach(([emotion, count]) => {
+                const percentage = (count / total) * 100;
+                const emotionName = emotionChinese[emotion] || emotion;
+                const color = emotionColors[emotion] || '#3498db';
+                const icon = emotionIcons[emotion] || '😐';
+
+                html += `
+                    <div style="margin: 10px 0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span style="font-weight: 600;">${icon} ${emotionName}</span>
+                            <span>${count}次 (${percentage.toFixed(1)}%)</span>
+                        </div>
+                        <div style="height: 20px; background: #ecf0f1; border-radius: 10px; overflow: hidden;">
+                            <div style="height: 100%; width: ${percentage}%; background-color: ${color}; border-radius: 10px;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return html;
+        }
+
+        // ================ 原有的功能函数 ================
+
+        // 更新情绪显示
+        function updateEmotionDisplay(prediction) {
+            const { emotion, confidence, probabilities } = prediction;
+
+            // 更新主要情绪
+            document.getElementById('mainEmotionIcon').textContent = emotionIcons[emotion] || '😐';
+            document.getElementById('mainEmotionName').textContent = emotionChinese[emotion] || emotion;
+            document.getElementById('mainEmotionConfidence').textContent = `置信度: ${(confidence * 100).toFixed(1)}%`;
+        }
+
+        // 更新建议显示
+        function updateAdviceDisplay(adviceReport) {
+            const { emotion_analysis, health_advice, risk_assessment, emergency_info } = adviceReport || {};
+
+            if (!health_advice) return;
+
+            // 更新风险评估
+            const riskLevel = document.getElementById('riskLevel');
+            const riskDescription = document.getElementById('riskDescription');
+
+            if (risk_assessment) {
+                riskLevel.textContent = risk_assessment.risk_level || 'unknown';
+                riskLevel.className = `risk-level risk-${risk_assessment.risk_level || 'unknown'}`;
+                riskDescription.textContent = risk_assessment.needs_attention ?
+                    '需要关注，建议采取行动' : '情况正常，建议保持';
+            }
+
+            // 更新建议列表
+            updateAdviceList('immediateAdvice', health_advice.immediate_actions);
+            updateAdviceList('dailyTips', health_advice.daily_tips);
+            updateAdviceList('longTermSuggestions', health_advice.long_term_suggestions);
+
+            // 更新紧急提示
+            const emergencyAlert = document.getElementById('emergencyAlert');
+            if (emergency_info && emergency_info.is_emergency) {
+                document.getElementById('emergencyText').textContent = emergency_info.advice;
+                emergencyAlert.style.display = 'flex';
+            } else {
+                emergencyAlert.style.display = 'none';
+            }
+        }
+
+        // 更新建议列表
+        function updateAdviceList(elementId, items, append = false) {
+            const listElement = document.getElementById(elementId);
+
+            if (!append) {
+                listElement.innerHTML = '';
+            }
+
+            if (items && items.length > 0) {
+                items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    listElement.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = '暂无建议';
+                listElement.appendChild(li);
+            }
+        }
+
+        // 创建情绪图表
+        function createEmotionChart(probabilities) {
+            const ctx = document.getElementById('emotionChart')?.getContext('2d');
+            if (!ctx) return;
+
+            // 如果已有图表，销毁它
+            if (emotionChart) {
+                emotionChart.destroy();
+            }
+
+            const labels = Object.keys(probabilities).map(emo => emotionChinese[emo] || emo);
+            const data = Object.values(probabilities).map(p => p * 100);
+            const backgroundColors = Object.keys(probabilities).map(emo => emotionColors[emo] || '#3498db');
+
+            emotionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '情绪概率 (%)',
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors.map(color => color.replace('0.8', '1')),
+                        borderWidth: 1,
+                        borderRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '概率 (%)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '情绪类型'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Base64转Blob
+        function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
+            const byteCharacters = atob(b64Data);
+            const byteArrays = [];
+
+            for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                const slice = byteCharacters.slice(offset, offset + sliceSize);
+                const byteNumbers = new Array(slice.length);
+
+                for (let i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+
+                const byteArray = new Uint8Array(byteNumbers);
+                byteArrays.push(byteArray);
+            }
+
+            return new Blob(byteArrays, { type: contentType });
+        }
+
+        // ================ 监测相关函数 ================
+
+        // 检查监测器状态
+        async function checkMonitorStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/monitor/status`);
+                const result = await response.json();
+
+                if (result.success) {
+                    updateMonitorUI(result.status);
+                }
+            } catch (error) {
+                console.log('监测器状态检查失败:', error);
+            }
+        }
+
+        // 更新监测UI
+        function updateMonitorUI(status) {
+            const statusDiv = document.getElementById('monitorStatus');
+            const startBtn = document.getElementById('startMonitorBtn');
+            const stopBtn = document.getElementById('stopMonitorBtn');
+
+            if (!statusDiv) return;
+
+            if (status.is_monitoring) {
+                // 监测运行中
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-flex';
+
+                statusDiv.innerHTML = `
+                    <div style="background: #d4edda; padding: 10px; border-radius: 5px; border: 1px solid #c3e6cb;">
+                        <i class="fas fa-play-circle"></i>
+                        <strong>监测运行中</strong>
+                        <div style="margin-top: 5px; font-size: 0.9em;">
+                            已抓拍: ${status.total_captures || 0} 张 |
+                            成功分析: ${status.successful_analyses || 0} 张 |
+                            间隔: ${status.capture_interval || 5}秒
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 监测停止
+                startBtn.style.display = 'inline-flex';
+                stopBtn.style.display = 'none';
+                statusDiv.innerHTML = `
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef;">
+                        <i class="fas fa-stop-circle"></i>
+                        <strong>监测已停止</strong>
+                        <div style="margin-top: 5px; font-size: 0.9em;">
+                            总计抓拍: ${status.total_captures || 0} 张 |
+                            总计分析: ${status.successful_analyses || 0} 张
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 开始监测
+        async function startMonitoring() {
+            const captureInterval = parseInt(document.getElementById('captureInterval').value) || 5;
+            const cameraIndex = parseInt(document.getElementById('cameraIndex').value) || 0;
+
+            if (captureInterval < 1) {
+                showStatus('抓拍间隔必须至少1秒', 'error');
+                return;
+            }
+
+            const confirmStart = confirm(`开始实时监测？\n摄像头索引: ${cameraIndex}\n抓拍间隔: ${captureInterval}秒`);
+            if (!confirmStart) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/monitor/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        camera_index: cameraIndex,
+                        capture_interval: captureInterval
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('实时监测已启动', 'success');
+                    checkMonitorStatus();
+                } else {
+                    showStatus(`启动失败: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`启动失败: ${error.message}`, 'error');
+                console.error('启动监测错误:', error);
+            }
+        }
+
+        // 停止监测
+        async function stopMonitoring() {
+            const confirmStop = confirm('确定要停止实时监测吗？');
+            if (!confirmStop) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/monitor/stop`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('监测已停止', 'success');
+                    checkMonitorStatus();
+                } else {
+                    showStatus(`停止失败: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`停止失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 分析监测历史
+        async function analyzeMonitoringHistory() {
+            const analyzeBtn = event.target;
+            const originalText = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = '<div class="loading"></div> 分析中...';
+            analyzeBtn.disabled = true;
+
+            try {
+                showStatus('正在分析监测历史数据...', 'success');
+
+                const response = await fetch(`${API_BASE_URL}/monitor/analyze`);
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(`成功分析 ${result.total_results || 0} 条监测数据`, 'success');
+
+                    // 显示监测分析结果
+                    const monitorContent = document.getElementById('monitorAnalysisContent');
+                    if (monitorContent) {
+                        monitorContent.innerHTML = `
+                            <div style="background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);">
+                                <div style="text-align: center; margin-bottom: 25px;">
+                                    <i class="fas fa-chart-line" style="font-size: 48px; color: #3498db; margin-bottom: 15px;"></i>
+                                    <h3 style="color: #2c3e50; margin-bottom: 10px;">监测数据分析报告</h3>
+                                    <p style="color: #7f8c8d;">基于 ${result.total_results || 0} 条监测数据</p>
+                                </div>
+
+                                <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                                    <h4><i class="fas fa-chart-pie"></i> 情绪分布</h4>
+                                    <div style="margin-top: 15px;">
+                                        ${generateEmotionDistributionHTML(result.analysis?.emotion_distribution || {}, result.total_results || 1)}
+                                    </div>
+                                </div>
+
+                                <div style="background: #e8f4fc; padding: 20px; border-radius: 12px;">
+                                    <h4><i class="fas fa-info-circle"></i> 分析摘要</h4>
+                                    <p style="margin-top: 10px; line-height: 1.6;">
+                                        主要情绪: ${result.analysis?.dominant_emotion?.emotion_zh || '未知'}
+                                        (占比${result.analysis?.dominant_emotion?.percentage?.toFixed(1) || 0}%)<br>
+                                        平均置信度: ${(result.analysis?.average_confidences?.[result.analysis?.dominant_emotion?.emotion] || 0) * 100 || 0}%<br>
+                                        样本总数: ${result.total_results || 0}
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // 切换到监测标签页
+                    switchTab('monitorTab');
+                } else {
+                    showStatus(`分析失败: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`分析失败: ${error.message}`, 'error');
+                console.error('分析监测历史错误:', error);
+            } finally {
+                analyzeBtn.innerHTML = originalText;
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // 拖放功能
+        const uploadArea = document.getElementById('uploadArea');
+
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e8f4fc';
+            uploadArea.style.borderColor = '#2980b9';
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8f9fa';
+            uploadArea.style.borderColor = '#3498db';
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8f9fa';
+            uploadArea.style.borderColor = '#3498db';
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    // 创建FileList对象
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    document.getElementById('fileInput').files = dataTransfer.files;
+
+                    // 触发文件选择事件
+                    const event = new Event('change', { bubbles: true });
+                    document.getElementById('fileInput').dispatchEvent(event);
+                } else {
+                    showStatus('请选择图像文件', 'error');
+                }
+            }
+        });
+
+        // 添加fetch超时功能
+        const originalFetch = window.fetch;
+        window.fetch = function(resource, options = {}) {
+            const timeout = options.timeout || 10000;
+
+            const controller = new AbortController();
+            const signal = controller.signal;
+
+            // 设置超时
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, timeout);
+
+            const fetchPromise = originalFetch(resource, {
+                ...options,
+                signal
+            });
+
+            // 清理超时
+            fetchPromise.then(() => clearTimeout(timeoutId))
+                       .catch(() => clearTimeout(timeoutId));
+
+            return fetchPromise;
+        };
+    </script>
+</body>
+</html>

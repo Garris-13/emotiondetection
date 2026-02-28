@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表情识别与健康建议系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eaeaea;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .header h1 i {
+            color: #3498db;
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .connection-status {
+            margin: 15px auto;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-checking {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        .content-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .upload-section {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .results-section {
+            flex: 2;
+            min-width: 300px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #3498db;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            background: #e8f4fc;
+            border-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .upload-area i {
+            font-size: 60px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .upload-area h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .upload-area p {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .upload-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .upload-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .upload-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            display: none;
+        }
+        
+        .preview-container {
+            margin-top: 25px;
+            text-align: center;
+        }
+        
+        .preview-container img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-context {
+            margin-top: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #eaeaea;
+        }
+        
+        .user-context h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .context-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .context-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .context-item label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .context-item select, .context-item input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .results-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #7f8c8d;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .tab-btn.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .emotion-chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+        
+        .emotion-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+        }
+        
+        .main-emotion {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .emotion-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+        
+        .emotion-name {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .emotion-confidence {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+        
+        .emotion-bar {
+            flex: 2;
+            padding: 0 30px;
+        }
+        
+        .probability-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .emotion-label {
+            width: 100px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .probability-bar-container {
+            flex: 1;
+            height: 25px;
+            background: #ecf0f1;
+            border-radius: 12.5px;
+            overflow: hidden;
+            margin: 0 15px;
+        }
+        
+        .probability-bar {
+            height: 100%;
+            border-radius: 12.5px;
+            transition: width 1s ease;
+        }
+        
+        .probability-value {
+            width: 60px;
+            text-align: right;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .advice-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .advice-category {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .advice-category h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .advice-category h4 i {
+            color: #3498db;
+        }
+        
+        .advice-list {
+            list-style: none;
+        }
+        
+        .advice-list li {
+            padding: 10px 0 10px 30px;
+            position: relative;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .advice-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .advice-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .risk-level {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .risk-low { background: #d4edda; color: #155724; }
+        .risk-medium { background: #fff3cd; color: #856404; }
+        .risk-high { background: #f8d7da; color: #721c24; }
+        
+        .emergency-alert {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: pulse 2s infinite;
+        }
+        
+        .server-info {
+            background: #e8f4fc;
+            border: 1px solid #3498db;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .server-info.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .server-info h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .info-value {
+            color: #2c3e50;
+            word-break: break-all;
+        }
+        
+        .connection-troubleshoot {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .connection-troubleshoot.active {
+            display: block;
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            border-top: 1px solid #eee;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .content-wrapper {
+                flex-direction: column;
+            }
+            
+            .emotion-summary {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .emotion-bar {
+                padding: 0;
+                width: 100%;
+            }
+            
+            .context-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-smile"></i> 表情识别与健康建议系统</h1>
+            <p>上传面部图像，系统将识别您的情绪并提供个性化的健康建议和情绪管理策略</p>
+            
+            <!-- 连接状态显示 -->
+            <div class="connection-status status-checking" id="connectionStatus">
+                <i class="fas fa-sync fa-spin"></i>
+                <span>正在检查API服务器连接...</span>
+            </div>
+        </div>
+        
+        <!-- 服务器信息面板 -->
+        <div class="server-info" id="serverInfo">
+            <h4><i class="fas fa-server"></i> API服务器信息</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">服务器地址</div>
+                    <div class="info-value" id="serverUrl">http://localhost:5000</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">连接状态</div>
+                    <div class="info-value" id="serverStatus">检查中...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">运行设备</div>
+                    <div class="info-value" id="serverDevice">未知</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">模型状态</div>
+                    <div class="info-value" id="serverModel">未知</div>
+                </div>
+            </div>
+            
+            <!-- 连接故障排查 -->
+            <div class="connection-troubleshoot" id="connectionTroubleshoot">
+                <h5><i class="fas fa-tools"></i> 连接问题排查</h5>
+                <p>如果无法连接到API服务器，请检查：</p>
+                <ol>
+                    <li>确保API服务器已启动（运行 <code>start_api.bat</code>）</li>
+                    <li>检查端口5000是否被占用</li>
+                    <li>尝试刷新页面重新连接</li>
+                    <li>查看浏览器控制台是否有错误信息</li>
+                </ol>
+                <button class="upload-btn" onclick="checkConnection()" style="margin-top: 10px; padding: 8px 16px;">
+                    <i class="fas fa-redo"></i> 重新测试连接
+                </button>
+            </div>
+        </div>
+        
+        <div class="content-wrapper">
+            <!-- 左侧：上传区域 -->
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>上传面部图像</h3>
+                    <p>支持 JPG、PNG 格式，文件大小不超过 5MB</p>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i> 选择图像文件
+                    </button>
+                </div>
+                
+                <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+                
+                <div class="file-info" id="fileInfo">
+                    <strong>已选择文件:</strong> <span id="fileName"></span><br>
+                    <strong>文件大小:</strong> <span id="fileSize"></span><br>
+                    <strong>文件类型:</strong> <span id="fileType"></span>
+                </div>
+                
+                <div class="preview-container" id="previewContainer">
+                    <img id="imagePreview" alt="图像预览">
+                </div>
+                
+                <!-- 用户上下文信息 -->
+                <div class="user-context">
+                    <h4><i class="fas fa-user-circle"></i> 个人信息（可选）</h4>
+                    <div class="context-grid">
+                        <div class="context-item">
+                            <label>年龄组:</label>
+                            <select id="ageGroup">
+                                <option value="child">儿童 (0-12岁)</option>
+                                <option value="teen">青少年 (13-19岁)</option>
+                                <option value="adult" selected>成人 (20-59岁)</option>
+                                <option value="elder">老年人 (60岁以上)</option>
+                            </select>
+                        </div>
+                        <div class="context-item">
+                            <label>是否有支持系统:</label>
+                            <select id="hasSupport">
+                                <option value="true" selected>是</option>
+                                <option value="false">否</option>
+                            </select>
+                        </div>
+                        <div class="context-item">
+                            <label>压力水平:</label>
+                            <select id="stressLevel">
+                                <option value="low">低</option>
+                                <option value="medium" selected>中</option>
+                                <option value="high">高</option>
+                            </select>
+                        </div>
+                        <div class="context-item">
+                            <label>是否首次使用:</label>
+                            <select id="isFirstTime">
+                                <option value="true">是</option>
+                                <option value="false" selected>否</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="upload-btn" onclick="analyzeEmotion()" style="width: 100%; margin-top: 20px;" id="analyzeBtn">
+                    <i class="fas fa-brain"></i> 开始情绪分析与建议
+                </button>
+            </div>
+            
+            <!-- 右侧：结果区域 -->
+            <div class="results-section">
+                <div class="results-tabs">
+                    <button class="tab-btn active" onclick="switchTab('emotionTab')">
+                        <i class="fas fa-chart-bar"></i> 情绪分析
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('adviceTab')">
+                        <i class="fas fa-heart"></i> 健康建议
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('detailsTab')">
+                        <i class="fas fa-info-circle"></i> 详细报告
+                    </button>
+                </div>
+                
+                <!-- 情绪分析标签页 -->
+                <div id="emotionTab" class="tab-content active">
+                    <div class="emotion-chart-container">
+                        <div class="emotion-summary">
+                            <div class="main-emotion">
+                                <div class="emotion-icon" id="mainEmotionIcon">😐</div>
+                                <div class="emotion-name" id="mainEmotionName">等待分析</div>
+                                <div class="emotion-confidence" id="mainEmotionConfidence">置信度: --%</div>
+                            </div>
+                            
+                            <div class="emotion-bar">
+                                <div id="probabilityBars">
+                                    <p style="text-align: center; color: #7f8c8d;">上传图像并点击分析按钮查看结果</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <canvas id="emotionChart"></canvas>
+                    </div>
+                    
+                    <div class="risk-indicator">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>风险评估:</strong> 
+                            <span id="riskLevel" class="risk-level">未评估</span>
+                        </div>
+                        <div id="riskDescription">请先进行分析</div>
+                    </div>
+                </div>
+                
+                <!-- 健康建议标签页 -->
+                <div id="adviceTab" class="tab-content">
+                    <div class="advice-section">
+                        <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-hands-helping"></i> 个性化健康建议
+                        </h3>
+                        
+                        <div class="advice-category">
+                            <h4><i class="fas fa-bolt"></i> 立即行动建议</h4>
+                            <ul class="advice-list" id="immediateAdvice">
+                                <li>请先上传图像并进行分析</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="advice-category">
+                            <h4><i class="fas fa-calendar-day"></i> 日常贴士</h4>
+                            <ul class="advice-list" id="dailyTips">
+                                <li>请先上传图像并进行分析</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="advice-category">
+                            <h4><i class="fas fa-seedling"></i> 长期建议</h4>
+                            <ul class="advice-list" id="longTermSuggestions">
+                                <li>请先上传图像并进行分析</li>
+                            </ul>
+                        </div>
+                        
+                        <div id="emergencyAlert" class="emergency-alert" style="display: none;">
+                            <i class="fas fa-exclamation-circle fa-2x"></i>
+                            <div>
+                                <strong>紧急提示</strong>
+                                <p id="emergencyText"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 详细报告标签页 -->
+                <div id="detailsTab" class="tab-content">
+                    <div class="advice-section">
+                        <h3 style="color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-file-medical-alt"></i> 详细情绪分析报告
+                        </h3>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                            <h4>情绪模式分析</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">
+                                <div style="background: white; padding: 15px; border-radius: 8px;">
+                                    <strong>情绪复杂度:</strong> <span id="complexityValue">--</span>
+                                </div>
+                                <div style="background: white; padding: 15px; border-radius: 8px;">
+                                    <strong>情绪强度:</strong> <span id="intensityValue">--</span>
+                                </div>
+                                <div style="background: white; padding: 15px; border-radius: 8px;">
+                                    <strong>是否混合情绪:</strong> <span id="mixedEmotions">--</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+                            <h4>次要情绪识别</h4>
+                            <div id="secondaryEmotions" style="margin-top: 15px;">
+                                <p style="color: #7f8c8d; text-align: center;">暂无次要情绪数据</p>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 20px; background: #e8f4fc; border-radius: 12px;">
+                            <h4><i class="fas fa-lightbulb"></i> 专家建议</h4>
+                            <p id="expertAdvice" style="margin-top: 10px; line-height: 1.6;">
+                                完整的专家建议将在情绪分析后显示
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>表情识别与健康建议系统 v2.0 | 基于深度学习的情感识别 | 提供心理健康支持</p>
+            <p>注意：本系统仅供学习和参考，如有严重情绪问题请及时寻求专业心理帮助</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                服务器状态: <span id="footerStatus">检查中...</span> | 
+                最后更新: <span id="lastUpdate">--</span>
+            </p>
+        </div>
+    </div>
+    
+    <!-- 状态提示栏 -->
+    <div id="statusBar" class="status-bar"></div>
+    
+    <script>
+        // 全局变量
+        let emotionChart = null;
+        let currentImageData = null;
+        let isConnected = false;
+        const API_BASE_URL = 'http://localhost:7860';
+        
+        // 情绪图标映射
+        const emotionIcons = {
+            'anger': '😠',
+            'disgust': '🤢',
+            'fear': '😨',
+            'happy': '😊',
+            'sad': '😢',
+            'surprised': '😲'
+        };
+        
+        // 情绪颜色映射
+        const emotionColors = {
+            'anger': '#e74c3c',
+            'disgust': '#27ae60',
+            'fear': '#8e44ad',
+            'happy': '#f39c12',
+            'sad': '#3498db',
+            'surprised': '#1abc9c'
+        };
+        
+        // 情绪中文名称映射
+        const emotionChinese = {
+            'anger': '愤怒',
+            'disgust': '厌恶',
+            'fear': '恐惧',
+            'happy': '快乐',
+            'sad': '悲伤',
+            'surprised': '惊讶'
+        };
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 隐藏预览容器
+            document.getElementById('previewContainer').style.display = 'none';
+            document.getElementById('fileInfo').style.display = 'none';
+            
+            // 检查API连接
+            checkConnection();
+            
+            // 设置自动连接检查（每30秒一次）
+            setInterval(checkConnection, 30000);
+            
+            // 更新最后更新时间
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        });
+        
+        // 检查API连接
+        async function checkConnection() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const serverInfo = document.getElementById('serverInfo');
+            const troubleshootDiv = document.getElementById('connectionTroubleshoot');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const footerStatus = document.getElementById('footerStatus');
+            
+            // 显示检查状态
+            statusDiv.className = 'connection-status status-checking';
+            statusDiv.innerHTML = '<i class="fas fa-sync fa-spin"></i><span>正在检查API服务器连接...</span>';
+            footerStatus.textContent = '检查连接中...';
+            footerStatus.style.color = '#856404';
+            
+            try {
+                // 尝试连接API
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    timeout: 5000 // 5秒超时
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 更新连接状态
+                    isConnected = true;
+                    statusDiv.className = 'connection-status status-connected';
+                    statusDiv.innerHTML = `<i class="fas fa-check-circle"></i><span>✅ 已连接到API服务器</span>`;
+                    
+                    // 更新服务器信息
+                    document.getElementById('serverUrl').textContent = API_BASE_URL;
+                    document.getElementById('serverStatus').textContent = '已连接';
+                    document.getElementById('serverStatus').style.color = '#155724';
+                    document.getElementById('serverDevice').textContent = data.device || 'CPU';
+                    document.getElementById('serverModel').textContent = data.model_loaded ? '已加载' : '未加载';
+                    
+                    // 显示服务器信息
+                    serverInfo.classList.add('active');
+                    troubleshootDiv.classList.remove('active');
+                    
+                    // 启用分析按钮
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.title = '点击开始分析';
+                    
+                    // 更新页脚状态
+                    footerStatus.textContent = '已连接';
+                    footerStatus.style.color = '#155724';
+                    
+                    // 显示成功消息
+                    showStatus('已成功连接到API服务器', 'success');
+                    
+                    console.log('API服务器信息:', data);
+                    
+                } else {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+            } catch (error) {
+                // 连接失败
+                isConnected = false;
+                statusDiv.className = 'connection-status status-disconnected';
+                statusDiv.innerHTML = `<i class="fas fa-times-circle"></i><span>❌ 无法连接到API服务器</span>`;
+                
+                // 更新服务器信息
+                document.getElementById('serverStatus').textContent = '连接失败';
+                document.getElementById('serverStatus').style.color = '#721c24';
+                document.getElementById('serverDevice').textContent = '未知';
+                document.getElementById('serverModel').textContent = '未知';
+                
+                // 显示服务器信息和故障排查
+                serverInfo.classList.add('active');
+                troubleshootDiv.classList.add('active');
+                
+                // 禁用分析按钮
+                analyzeBtn.disabled = true;
+                analyzeBtn.title = '请先连接API服务器';
+                
+                // 更新页脚状态
+                footerStatus.textContent = '连接失败';
+                footerStatus.style.color = '#721c24';
+                
+                // 显示错误消息
+                showStatus(`连接失败: ${error.message}`, 'error');
+                
+                console.error('API连接错误:', error);
+            }
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 检查文件类型
+            if (!file.type.startsWith('image/')) {
+                showStatus('请选择图像文件 (JPG, PNG等)', 'error');
+                return;
+            }
+            
+            // 检查文件大小 (限制5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showStatus('文件过大，请选择小于5MB的图像', 'error');
+                return;
+            }
+            
+            // 显示文件信息
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileType').textContent = file.type;
+            document.getElementById('fileInfo').style.display = 'block';
+            
+            // 预览图像
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewImg = document.getElementById('imagePreview');
+                previewImg.src = e.target.result;
+                document.getElementById('previewContainer').style.display = 'block';
+                currentImageData = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 切换标签页
+        function switchTab(tabId) {
+            // 移除所有标签页的active类
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 激活当前标签页
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+        
+        // 显示状态消息
+        function showStatus(message, type = 'success') {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+            statusBar.className = `status-bar status-${type}`;
+            statusBar.style.display = 'block';
+            
+            setTimeout(() => {
+                statusBar.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 分析情绪
+        async function analyzeEmotion() {
+            // 检查连接状态
+            if (!isConnected) {
+                showStatus('请先确保API服务器已连接', 'error');
+                checkConnection();
+                return;
+            }
+            
+            if (!currentImageData) {
+                showStatus('请先选择一张图像', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const originalText = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = '<div class="loading"></div> 分析中...';
+            analyzeBtn.disabled = true;
+            
+            // 获取用户上下文
+            const userContext = {
+                age_group: document.getElementById('ageGroup').value,
+                has_support_system: document.getElementById('hasSupport').value === 'true',
+                stress_level: document.getElementById('stressLevel').value,
+                is_first_time: document.getElementById('isFirstTime').value === 'true'
+            };
+            
+            try {
+                // 将base64数据转换为blob
+                const base64Data = currentImageData.split(',')[1];
+                const blob = b64toBlob(base64Data, 'image/jpeg');
+                
+                // 创建FormData
+                const formData = new FormData();
+                formData.append('image', blob, 'uploaded_image.jpg');
+                formData.append('user_context', JSON.stringify(userContext));
+                
+                // 显示连接状态
+                showStatus('正在分析图像，请稍候...', 'success');
+                
+                // 发送请求
+                const response = await fetch(`${API_BASE_URL}/predict_with_advice`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 更新界面显示结果
+                    updateEmotionDisplay(result.prediction);
+                    updateAdviceDisplay(result.health_advice_report);
+                    createEmotionChart(result.prediction.probabilities);
+                    showStatus('情绪分析完成！', 'success');
+                    
+                    // 更新最后更新时间
+                    document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+                } else {
+                    throw new Error(result.error || '分析失败');
+                }
+                
+            } catch (error) {
+                console.error('分析错误:', error);
+                showStatus(`分析失败: ${error.message}`, 'error');
+                
+                // 检查连接是否中断
+                if (error.message.includes('fetch') || error.message.includes('network')) {
+                    isConnected = false;
+                    checkConnection();
+                }
+            } finally {
+                // 恢复按钮状态
+                analyzeBtn.innerHTML = originalText;
+                analyzeBtn.disabled = false;
+            }
+        }
+        
+        // Base64转Blob
+        function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
+            const byteCharacters = atob(b64Data);
+            const byteArrays = [];
+            
+            for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                const slice = byteCharacters.slice(offset, offset + sliceSize);
+                const byteNumbers = new Array(slice.length);
+                
+                for (let i = 0; i < slice.length; i++) {
+                    byteNumbers[i] = slice.charCodeAt(i);
+                }
+                
+                const byteArray = new Uint8Array(byteNumbers);
+                byteArrays.push(byteArray);
+            }
+            
+            return new Blob(byteArrays, { type: contentType });
+        }
+        
+        // 更新情绪显示
+        function updateEmotionDisplay(prediction) {
+            const { emotion, confidence, probabilities } = prediction;
+            
+            // 更新主要情绪
+            document.getElementById('mainEmotionIcon').textContent = emotionIcons[emotion] || '😐';
+            document.getElementById('mainEmotionName').textContent = emotionChinese[emotion] || emotion;
+            document.getElementById('mainEmotionConfidence').textContent = `置信度: ${(confidence * 100).toFixed(1)}%`;
+            
+            // 更新概率条
+            const probabilityBars = document.getElementById('probabilityBars');
+            probabilityBars.innerHTML = '';
+            
+            Object.entries(probabilities).forEach(([emo, prob]) => {
+                const percentage = (prob * 100).toFixed(1);
+                const barWidth = (prob * 100).toFixed(1);
+                
+                const barHtml = `
+                    <div class="probability-item">
+                        <div class="emotion-label">${emotionIcons[emo]} ${emotionChinese[emo] || emo}</div>
+                        <div class="probability-bar-container">
+                            <div class="probability-bar" 
+                                 style="width: ${barWidth}%; background-color: ${emotionColors[emo] || '#3498db'}">
+                            </div>
+                        </div>
+                        <div class="probability-value">${percentage}%</div>
+                    </div>
+                `;
+                
+                probabilityBars.innerHTML += barHtml;
+            });
+        }
+        
+        // 更新建议显示
+        function updateAdviceDisplay(adviceReport) {
+            const { emotion_analysis, health_advice, risk_assessment, emergency_info } = adviceReport;
+            
+            // 更新风险评估
+            const riskLevel = document.getElementById('riskLevel');
+            const riskDescription = document.getElementById('riskDescription');
+            
+            riskLevel.textContent = risk_assessment.risk_level;
+            riskLevel.className = `risk-level risk-${risk_assessment.risk_level}`;
+            riskDescription.textContent = risk_assessment.needs_attention ? 
+                '需要关注，建议采取行动' : '情况正常，建议保持';
+            
+            // 更新建议列表
+            updateAdviceList('immediateAdvice', health_advice.immediate_actions);
+            updateAdviceList('dailyTips', health_advice.daily_tips);
+            updateAdviceList('longTermSuggestions', health_advice.long_term_suggestions);
+            
+            // 更新额外建议
+            if (health_advice.additional_suggestions && health_advice.additional_suggestions.length > 0) {
+                updateAdviceList('longTermSuggestions', health_advice.additional_suggestions, true);
+            }
+            
+            // 更新紧急提示
+            const emergencyAlert = document.getElementById('emergencyAlert');
+            if (emergency_info && emergency_info.is_emergency) {
+                document.getElementById('emergencyText').textContent = emergency_info.advice;
+                emergencyAlert.style.display = 'flex';
+            } else {
+                emergencyAlert.style.display = 'none';
+            }
+            
+            // 更新详细报告
+            updateDetailedReport(emotion_analysis, health_advice);
+        }
+        
+        // 更新建议列表
+        function updateAdviceList(elementId, items, append = false) {
+            const listElement = document.getElementById(elementId);
+            
+            if (!append) {
+                listElement.innerHTML = '';
+            }
+            
+            if (items && items.length > 0) {
+                items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    listElement.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = '暂无建议';
+                listElement.appendChild(li);
+            }
+        }
+        
+        // 更新详细报告
+        function updateDetailedReport(emotionAnalysis, healthAdvice) {
+            // 情绪模式分析
+            document.getElementById('complexityValue').textContent = emotionAnalysis.emotion_complexity.toFixed(3);
+            document.getElementById('intensityValue').textContent = emotionAnalysis.intensity_level;
+            document.getElementById('mixedEmotions').textContent = emotionAnalysis.has_mixed_emotions ? '是' : '否';
+            
+            // 次要情绪
+            const secondaryEmotionsDiv = document.getElementById('secondaryEmotions');
+            secondaryEmotionsDiv.innerHTML = '';
+            
+            if (emotionAnalysis.secondary_emotions && emotionAnalysis.secondary_emotions.length > 0) {
+                emotionAnalysis.secondary_emotions.forEach(sec => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'background: white; padding: 10px; margin-bottom: 10px; border-radius: 8px;';
+                    div.innerHTML = `
+                        <strong>${sec.emotion_zh} (${sec.emotion})</strong>: ${(sec.probability * 100).toFixed(1)}%
+                        <div style="height: 10px; background: #ecf0f1; border-radius: 5px; margin-top: 5px;">
+                            <div style="height: 100%; width: ${sec.probability * 100}%; 
+                                      background-color: ${emotionColors[sec.emotion] || '#3498db'}; 
+                                      border-radius: 5px;">
+                            </div>
+                        </div>
+                    `;
+                    secondaryEmotionsDiv.appendChild(div);
+                });
+            } else {
+                secondaryEmotionsDiv.innerHTML = '<p style="color: #7f8c8d; text-align: center;">无明显的次要情绪</p>';
+            }
+            
+            // 专家建议
+            const expertAdvice = document.getElementById('expertAdvice');
+            let adviceText = `<strong>${emotionAnalysis.main_emotion_zh}情绪管理建议:</strong><br>`;
+            adviceText += `${healthAdvice.description}<br><br>`;
+            
+            if (emotionAnalysis.has_mixed_emotions) {
+                adviceText += '<strong>专家提示:</strong> 您可能正在经历复杂的混合情绪，建议分别处理每种情绪，并寻求专业指导。';
+            } else if (emotionAnalysis.intensity_level === '非常高') {
+                adviceText += '<strong>专家提示:</strong> 情绪强度较高，建议优先采取立即行动建议，并及时寻求支持。';
+            } else {
+                adviceText += '<strong>专家提示:</strong> 建议结合立即行动和长期建议，建立健康的情绪管理习惯。';
+            }
+            
+            expertAdvice.innerHTML = adviceText;
+        }
+        
+        // 创建情绪图表
+        function createEmotionChart(probabilities) {
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            
+            // 如果已有图表，销毁它
+            if (emotionChart) {
+                emotionChart.destroy();
+            }
+            
+            const labels = Object.keys(probabilities).map(emo => emotionChinese[emo] || emo);
+            const data = Object.values(probabilities).map(p => p * 100);
+            const backgroundColors = Object.keys(probabilities).map(emo => emotionColors[emo] || '#3498db');
+            
+            emotionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '情绪概率 (%)',
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors.map(color => color.replace('0.8', '1')),
+                        borderWidth: 1,
+                        borderRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '概率 (%)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: '情绪类型'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 拖放功能
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e8f4fc';
+            uploadArea.style.borderColor = '#2980b9';
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8f9fa';
+            uploadArea.style.borderColor = '#3498db';
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8f9fa';
+            uploadArea.style.borderColor = '#3498db';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    // 创建FileList对象
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    document.getElementById('fileInput').files = dataTransfer.files;
+                    
+                    // 触发文件选择事件
+                    const event = new Event('change', { bubbles: true });
+                    document.getElementById('fileInput').dispatchEvent(event);
+                } else {
+                    showStatus('请选择图像文件', 'error');
+                }
+            }
+        });
+        
+        // 添加fetch超时功能
+        const originalFetch = window.fetch;
+        window.fetch = function(resource, options = {}) {
+            const timeout = options.timeout || 10000; // 默认10秒超时
+            
+            const controller = new AbortController();
+            const signal = controller.signal;
+            
+            // 设置超时
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, timeout);
+            
+            const fetchPromise = originalFetch(resource, {
+                ...options,
+                signal
+            });
+            
+            // 清理超时
+            fetchPromise.then(() => clearTimeout(timeoutId))
+                       .catch(() => clearTimeout(timeoutId));
+            
+            return fetchPromise;
+        };
+    </script>
+</body>
+</html>
