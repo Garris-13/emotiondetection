@@ -1437,7 +1437,7 @@
                 const response = await fetch(`${API_BASE_URL}/predict_with_advice`, {
                     method: 'POST',
                     body: formData,
-                    timeout: 20000
+                    timeout: 300000
                 });
 
                 if (!response.ok) {
@@ -1587,7 +1587,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestBody),
-                    timeout: 45000  // 45秒超时
+                    timeout: 500000  // 45秒超时
                 });
 
                 if (!response.ok) {
@@ -2015,7 +2015,7 @@ async function getComprehensiveAnalysis(analysisType) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(requestBody),
-            timeout: 45000  // 45秒超时
+            timeout: 300000  // 45秒超时
         });
 
         if (!response.ok) {
@@ -2525,7 +2525,7 @@ function getAnalysisTypeName(type) {
         // 添加fetch超时功能
         const originalFetch = window.fetch;
         window.fetch = function(resource, options = {}) {
-            const timeout = options.timeout || 10000;
+            const timeout = options.timeout || 300000;
 
             const controller = new AbortController();
             const signal = controller.signal;
