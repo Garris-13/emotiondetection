@@ -43,6 +43,17 @@ import time
 import numpy as np
 import mediapipe as mp
 
+try:
+    from multiAgent.MultiAgentFlow import run_flow_from_data
+    from multiAgent.key_loader import get_api_key
+
+    MULTI_AGENT_AVAILABLE = True
+    print("✅ MultiAgent 模块可用")
+except Exception as e:
+    MULTI_AGENT_AVAILABLE = False
+    get_api_key = None
+    print(f"⚠️  MultiAgent 模块不可用: {e}")
+
 # ========================================================
 # 🚀 替代 MediaPipe 的高性能人脸检测器 (OpenCV DNN)
 # ========================================================
@@ -351,7 +362,8 @@ def home():
             'GET /monitor/analyze': '分析历史数据'
         },
         'AI大模型分析': {
-            'POST /comprehensive_analysis': '综合情绪分析并调用阿里云大模型'
+            'POST /comprehensive_analysis': '综合情绪分析并调用阿里云大模型',
+            'POST /multi_agent_analysis': '调用 multiAgent 生成结构化 Markdown 报告'
         }
     }
 
@@ -623,58 +635,40 @@ def comprehensive_analysis():
 
         print(f"📊 收集到 {len(history_data)} 条历史数据")
 
-        # 如果没有历史数据，使用算法生成模拟建议
+        used_sample_data = False
         if not history_data:
-            print("⚠️  没有找到历史分析数据，使用算法生成建议")
-
-            # 生成模拟数据用于演示
+            print("⚠️  没有找到历史分析数据，使用示例数据并调用大模型")
             history_data = generate_sample_data(10)
+            used_sample_data = True
 
-            # 分析数据，生成总结
-            analysis_result = analyze_comprehensive_data(history_data, analysis_type)
+        # 分析数据，生成总结
+        analysis_result = analyze_comprehensive_data(history_data, analysis_type)
 
-            # 使用算法生成建议（不调用大模型）
-            algorithm_result = generate_algorithm_based_analysis(analysis_result, analysis_type, user_context)
-
-            # 生成综合结果文件
-            comprehensive_result = {
-                'summary': analysis_result,
-                'algorithm_analysis': algorithm_result,
-                'total_samples': len(history_data),
-                'history_data': history_data[:5],  # 只保存前5条用于显示
-                'generated_at': datetime.now().isoformat(),
-                'analysis_type': analysis_type,
-                'user_context': user_context,  # 包含用户上下文
-                'using_algorithm': True,
-                'message': '使用算法生成建议（无历史数据或大模型不可用）'
-            }
+        # 调用单智能体大模型（失败时自动返回算法 fallback）
+        llm_response = None
+        if OPENAI_AVAILABLE:
+            llm_response = call_aliyun_llm(analysis_result, analysis_type, user_context)
         else:
-            # 分析数据，生成总结
-            analysis_result = analyze_comprehensive_data(history_data, analysis_type)
-
-            # 尝试调用阿里云大模型
-            llm_response = None
-            if OPENAI_AVAILABLE:
-                llm_response = call_aliyun_llm(analysis_result, analysis_type, user_context)
-            else:
-                print("⚠️  OpenAI SDK不可用，使用算法生成建议")
-                llm_response = {
-                    'success': False,
-                    'error': 'OpenAI SDK不可用',
-                    'algorithm_analysis': generate_algorithm_based_analysis(analysis_result, analysis_type, user_context)
-                }
-
-            # 生成综合结果文件
-            comprehensive_result = {
-                'summary': analysis_result,
-                'llm_response': llm_response,
-                'total_samples': len(history_data),
-                'history_data': history_data[:10],  # 只保存前10条用于显示
-                'generated_at': datetime.now().isoformat(),
-                'analysis_type': analysis_type,
-                'user_context': user_context,  # 包含用户上下文
-                'using_algorithm': not (llm_response and llm_response.get('success', False))
+            print("⚠️  OpenAI SDK不可用，使用算法生成建议")
+            llm_response = {
+                'success': False,
+                'error': 'OpenAI SDK不可用',
+                'fallback': generate_algorithm_based_analysis(analysis_result, analysis_type, user_context)
             }
+
+        # 生成综合结果文件
+        comprehensive_result = {
+            'summary': analysis_result,
+            'llm_response': llm_response,
+            'total_samples': len(history_data),
+            'history_data': history_data[:10],
+            'generated_at': datetime.now().isoformat(),
+            'analysis_type': analysis_type,
+            'user_context': user_context,
+            'using_algorithm': not (llm_response and llm_response.get('success', False)),
+            'used_sample_data': used_sample_data,
+            'message': '无历史数据，已使用示例数据进行大模型分析' if used_sample_data else '基于历史数据完成大模型分析'
+        }
 
         # 保存到综合结果文件（覆盖）
         output_filename = f"comprehensive_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -701,6 +695,102 @@ def comprehensive_analysis():
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }), 500
+
+
+@app.route('/multi_agent_analysis', methods=['POST'])
+def multi_agent_analysis():
+    """
+    使用 multiAgent 流程进行综合情绪分析，并输出 Markdown 报告。
+
+    请求体格式:
+    {
+        "days": 7,
+        "user_context": {
+            "age_group": "adult",
+            "stress_level": "medium",
+            "has_support_system": true,
+            "is_first_time": false
+        }
+    }
+    """
+    try:
+        if not MULTI_AGENT_AVAILABLE:
+            return jsonify({
+                'success': False,
+                'error': 'multiAgent 模块不可用，请检查 multiAgent 目录和依赖安装',
+                'timestamp': datetime.now().isoformat()
+            }), 500
+
+        if not request.is_json:
+            return jsonify({
+                'success': False,
+                'error': '请求必须是JSON格式',
+                'timestamp': datetime.now().isoformat()
+            }), 400
+
+        data = request.get_json() or {}
+        days = data.get('days', 7)
+        user_context = data.get('user_context') or {
+            "age_group": "adult",
+            "stress_level": "medium",
+            "has_support_system": True,
+            "is_first_time": False
+        }
+
+        results_dir = os.path.join(PROJECT_ROOT, "data", "monitor_results", "results")
+        history_data = []
+        if os.path.exists(results_dir):
+            for filename in os.listdir(results_dir):
+                if not filename.endswith('.json'):
+                    continue
+                filepath = os.path.join(results_dir, filename)
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        result = json.load(f)
+                    if days:
+                        result_time = datetime.fromisoformat(result['timestamp'].replace('Z', '+00:00'))
+                        if result_time.tzinfo is not None:
+                            result_time = result_time.replace(tzinfo=None)
+                        cutoff_time = datetime.now() - timedelta(days=days)
+                        if result_time < cutoff_time:
+                            continue
+                    history_data.append(result)
+                except Exception as e:
+                    print(f"❌ 读取监测结果失败 {filename}: {e}")
+
+        if not history_data:
+            history_data = generate_sample_data(10)
+
+        output_filename = f"multi_agent_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        output_path = os.path.join(COMPREHENSIVE_RESULT_DIR, output_filename)
+
+        final_report = run_flow_from_data(
+            history_data=history_data,
+            user_context=user_context,
+            output_path=output_path,
+        )
+
+        return jsonify({
+            'success': True,
+            'message': 'multiAgent 分析完成',
+            'report_markdown': final_report,
+            'output_file': output_filename,
+            'total_samples': len(history_data),
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        print(f"❌ multiAgent 分析失败: {e}")
+        error_msg = str(e)
+        status_code = 500
+        if 'API Key' in error_msg or 'DEEPSEEK_API_KEY' in error_msg or 'DASHSCOPE_API_KEY' in error_msg:
+            status_code = 400
+            error_msg = f"{error_msg} 请先配置环境变量后重启后端服务。"
+        return jsonify({
+            'success': False,
+            'error': error_msg,
+            'timestamp': datetime.now().isoformat()
+        }), status_code
 
 
 def generate_sample_data(num_samples):
@@ -1170,31 +1260,50 @@ def generate_algorithm_based_analysis(analysis_result, analysis_type, user_conte
 # ================ 修改 call_aliyun_llm 函数定义 ================
 def call_aliyun_llm(analysis_result, analysis_type, user_context=None):
     """
-    调用阿里云百炼平台大模型
-    使用兼容OpenAI的SDK
+    调用单智能体大模型：优先 DeepSeek，其次阿里云百炼。
+    使用兼容 OpenAI 的 SDK。
     """
     try:
         if not OPENAI_AVAILABLE:
             raise ImportError("OpenAI SDK 未安装，无法调用大模型")
 
-        # 从环境变量获取API Key
-        api_key = os.getenv("DASHSCOPE_API_KEY")
-        if not api_key:
-            raise ValueError("未设置 DASHSCOPE_API_KEY 环境变量，无法调用大模型")
+        # 读取 API Key（支持环境变量和 API_Key.json）
+        deepseek_key = None
+        dashscope_key = None
+        if get_api_key:
+            deepseek_key = get_api_key("deepseek")
+            dashscope_key = get_api_key("dashscope")
+
+        if not deepseek_key:
+            deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+        if not dashscope_key:
+            dashscope_key = os.getenv("DASHSCOPE_API_KEY")
+
+        if not deepseek_key and not dashscope_key:
+            raise ValueError("未找到可用 API Key，请配置 DEEPSEEK_API_KEY 或 DASHSCOPE_API_KEY（环境变量或 API_Key.json）")
+
+        # 优先 DeepSeek，回退百炼
+        if deepseek_key:
+            api_key = deepseek_key
+            base_url = "https://api.deepseek.com"
+            model_name = "deepseek-chat"
+            provider_name = "DeepSeek"
+        else:
+            api_key = dashscope_key
+            base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+            model_name = "qwen-plus"
+            provider_name = "DashScope"
 
         # 初始化OpenAI客户端
         client = OpenAI(
             api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            base_url=base_url,
         )
 
-        print(f"📤 调用阿里云百炼大模型，分析类型: {analysis_type}")
+        print(f"📤 调用单智能体大模型 [{provider_name}]，分析类型: {analysis_type}")
 
         # 构建提示词 - 添加 user_context 参数
         prompt = build_llm_prompt(analysis_result, analysis_type, user_context)
-
-        # 选择模型
-        model_name = "qwen-plus"  # 或 "qwen-max", "qwen-turbo"
 
         # 构建消息
         messages = [
@@ -1219,10 +1328,11 @@ def call_aliyun_llm(analysis_result, analysis_type, user_context=None):
         # 获取回复
         llm_response = completion.choices[0].message.content
 
-        print(f"✅ 大模型调用成功，回复长度: {len(llm_response)}")
+        print(f"✅ 大模型调用成功 [{provider_name}]，回复长度: {len(llm_response)}")
 
         return {
             'success': True,
+            'provider': provider_name,
             'model': model_name,
             'raw_response': llm_response,
             'usage': {
@@ -1233,7 +1343,7 @@ def call_aliyun_llm(analysis_result, analysis_type, user_context=None):
         }
 
     except Exception as e:
-        print(f"❌ 调用阿里云大模型失败: {e}")
+        print(f"❌ 调用单智能体大模型失败: {e}")
         return {
             'success': False,
             'error': str(e),
@@ -1254,7 +1364,11 @@ def build_system_prompt(analysis_type, user_context=None):
 3. 提供具体可操作的建议
 4. 考虑不同情绪状态的心理影响
 5. 必要时提供紧急建议
-6. 使用中文回复，结构清晰，易于理解""",
+    6. 使用中文回复，结构清晰，易于理解
+    7. 所有输出必须使用 Markdown 格式，至少包含以下二级标题：
+       - ## 风险评估
+       - ## 核心建议
+       - ## 今日行动清单""",
 
         'monitor_analysis': """你是一位专业的情绪数据分析师，擅长情绪监测数据分析。
 请根据用户提供的情绪监测数据，提供专业的分析报告。
@@ -1263,7 +1377,11 @@ def build_system_prompt(analysis_type, user_context=None):
 2. 识别异常模式和潜在问题
 3. 考虑用户的具体情况提供监测建议
 4. 预测可能的情绪变化趋势
-5. 使用中文回复，结构清晰，数据驱动""",
+    5. 使用中文回复，结构清晰，数据驱动
+    6. 所有输出必须使用 Markdown 格式，至少包含以下二级标题：
+       - ## 趋势摘要
+       - ## 关键发现
+       - ## 后续监测建议""",
 
         'detailed_report': """你是一位资深的心理学专家，擅长情绪模式识别和深度分析。
 请根据用户提供的详细情绪数据，提供专业的心理学分析报告。

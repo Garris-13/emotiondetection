@@ -13,12 +13,13 @@ from typing import Optional
 sys.path.insert(0, os.path.dirname(__file__))
 
 from deepseek_agent import DeepSeekAgent
+from dashscope_agent import DashScopeAgent
+from key_loader import get_api_key
 
 # ------------------------------------------------------------------ #
 #  全局配置
 # ------------------------------------------------------------------ #
 
-DEEPSEEK_API_KEY = "sk-6bb871d7af464f2d87eea6dd8ae1fc4f"
 MODEL = "deepseek-chat"
 
 
@@ -26,14 +27,33 @@ MODEL = "deepseek-chat"
 #  Agent 工厂函数
 # ------------------------------------------------------------------ #
 
-def make_agent(name: str, system_prompt: str, temperature: float = 0.7, max_tokens: int = 2000) -> DeepSeekAgent:
-    return DeepSeekAgent(
-        agent_name=name,
-        model=MODEL,
-        api_key=DEEPSEEK_API_KEY,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        system_prompt=system_prompt,
+def make_agent(name: str, system_prompt: str, temperature: float = 0.7, max_tokens: int = 2000):
+    deepseek_key = get_api_key("deepseek")
+    if deepseek_key:
+        return DeepSeekAgent(
+            agent_name=name,
+            model=MODEL,
+            api_key=deepseek_key,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_prompt,
+        )
+
+    # 兼容回退到百炼。
+    dashscope_key = get_api_key("dashscope")
+    if dashscope_key:
+        return DashScopeAgent(
+            agent_name=name,
+            model="qwen-plus",
+            api_key=dashscope_key,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            system_prompt=system_prompt,
+        )
+
+    raise ValueError(
+        f"[{name}] 未提供 API Key，请设置环境变量 DEEPSEEK_API_KEY / DASHSCOPE_API_KEY，"
+        f"或在项目根目录 API_Key.json 中配置 deepseek_api_key / dashscope_api_key。"
     )
 
 
@@ -157,7 +177,25 @@ def run_flow(input_path: str, user_context: Optional[dict] = None, output_path: 
         raw_data = json.load(f)
 
     history_data = raw_data.get("history_data", raw_data)  # 兼容直接传列表或带 key 的结构
+    return run_flow_from_data(history_data=history_data, user_context=user_context, output_path=output_path)
+
+
+def run_flow_from_data(history_data: list, user_context: Optional[dict] = None, output_path: Optional[str] = None) -> str:
+    """
+    直接使用历史数据执行多智能体流程。
+
+    Args:
+        history_data: 历史情绪数据列表
+        user_context: 用户画像字典，为 None 时使用默认值
+        output_path:  报告保存路径（.md），为 None 时自动生成
+
+    Returns:
+        最终 Markdown 报告字符串
+    """
     total_samples = len(history_data)
+
+    if total_samples == 0:
+        raise ValueError("history_data 不能为空")
 
     if user_context is None:
         user_context = {
@@ -242,7 +280,7 @@ def run_flow(input_path: str, user_context: Optional[dict] = None, output_path: 
     if output_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = os.path.join(
-            os.path.dirname(input_path),
+            os.path.dirname(__file__),
             f"report_{timestamp}.md"
         )
 

@@ -1,0 +1,11 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local runtime outputs
+data/comprehensive_results/
+
+# IDE
+.vscode/

@@ -7,6 +7,7 @@ DeepSeek API 兼容 OpenAI 格式，直接复用 base_agent 中的 OpenAI 客户
 import os
 from typing import Optional
 from base_agent import AIAgent
+from key_loader import get_api_key
 
 
 class DeepSeekAgent(AIAgent):
@@ -40,11 +41,12 @@ class DeepSeekAgent(AIAgent):
             max_tokens:    单次回复最大 token 数
             system_prompt: 自定义系统提示词；为 None 时使用默认提示词
         """
-        resolved_key = api_key or os.getenv("DEEPSEEK_API_KEY")
+        resolved_key = api_key or get_api_key("deepseek")
         if not resolved_key:
             raise ValueError(
                 f"[{agent_name}] 未提供 API Key，"
-                "请设置环境变量 DEEPSEEK_API_KEY 或在构造函数中传入 api_key 参数。"
+                "请设置环境变量 DEEPSEEK_API_KEY，或在项目根目录 API_Key.json 中配置 deepseek_api_key，"
+                "或在构造函数中传入 api_key 参数。"
             )
 
         self._custom_system_prompt = system_prompt

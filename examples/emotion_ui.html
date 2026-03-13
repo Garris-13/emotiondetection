@@ -694,6 +694,65 @@
             color: #7f8c8d;
         }
 
+        .ai-subpages-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .ai-subpage-btn {
+            border: 1px solid #dce2ea;
+            background: #ffffff;
+            color: #34495e;
+            border-radius: 10px;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .ai-subpage-btn.active {
+            background: #3498db;
+            color: #ffffff;
+            border-color: #3498db;
+        }
+
+        .ai-subpage {
+            display: none;
+        }
+
+        .ai-subpage.active {
+            display: block;
+        }
+
+        .markdown-report-box {
+            background: #f8fbff;
+            border: 1px solid #d9e8f6;
+            border-radius: 12px;
+            padding: 18px;
+            line-height: 1.7;
+            color: #2c3e50;
+            margin-top: 12px;
+        }
+
+        .markdown-report-box h1,
+        .markdown-report-box h2,
+        .markdown-report-box h3,
+        .markdown-report-box h4 {
+            margin: 14px 0 8px;
+            color: #1f3a56;
+        }
+
+        .markdown-report-box p {
+            margin: 8px 0;
+        }
+
+        .markdown-meta {
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #5f6f82;
+        }
+
         @media (max-width: 768px) {
             .content-wrapper {
                 flex-direction: column;
@@ -726,6 +785,9 @@
 </head>
 <body>
     <div class="container">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
         <div class="header">
             <h1><i class="fas fa-smile"></i> 表情识别与健康建议系统</h1>
             <p>上传面部图像，系统将识别您的情绪并提供个性化的健康建议和情绪管理策略</p>
@@ -992,47 +1054,85 @@
                             <div class="model-tag" id="modelTag">qwen-plus</div>
                         </div>
 
-                        <div class="llm-analysis-controls">
-                            <button class="upload-btn" onclick="getComprehensiveAnalysis('health_advice')" id="healthAdviceBtn">
-                                <i class="fas fa-heartbeat"></i> 健康建议
+                        <div class="ai-subpages-tabs">
+                            <button class="ai-subpage-btn active" onclick="switchAiSubPage('aiGeneralPage', event)">
+                                <i class="fas fa-wave-square"></i> 综合分析
                             </button>
-                            <button class="upload-btn monitor-btn" onclick="getComprehensiveAnalysis('monitor_analysis')" id="monitorAnalysisBtn">
-                                <i class="fas fa-chart-line"></i> 监测分析
+                            <button class="ai-subpage-btn" onclick="switchAiSubPage('aiMarkdownPage', event)">
+                                <i class="fas fa-file-lines"></i> AI_Markdown报告生成
                             </button>
-                            <button class="upload-btn ai-btn" onclick="getComprehensiveAnalysis('detailed_report')" id="detailedReportBtn">
-                                <i class="fas fa-file-medical-alt"></i> 详细报告
-                            </button>
-                            <div class="days-input">
-                                <label style="display: block; margin-bottom: 5px; color: #7f8c8d; font-size: 0.9rem;">分析天数:</label>
-                                <input type="number" id="llmAnalysisDays" min="1" max="365" value="7">
+                        </div>
+
+                        <div id="aiGeneralPage" class="ai-subpage active">
+                            <div class="llm-analysis-controls">
+                                <button class="upload-btn" onclick="getComprehensiveAnalysis('health_advice')" id="healthAdviceBtn">
+                                    <i class="fas fa-heartbeat"></i> 健康建议
+                                </button>
+                                <button class="upload-btn monitor-btn" onclick="getComprehensiveAnalysis('monitor_analysis')" id="monitorAnalysisBtn">
+                                    <i class="fas fa-chart-line"></i> 监测分析
+                                </button>
+                                <button class="upload-btn ai-btn" onclick="getDetailedReportByMultiAgent()" id="detailedReportBtn">
+                                    <i class="fas fa-file-medical-alt"></i> 详细报告
+                                </button>
+                                <div class="days-input">
+                                    <label style="display: block; margin-bottom: 5px; color: #7f8c8d; font-size: 0.9rem;">分析天数:</label>
+                                    <input type="number" id="llmAnalysisDays" min="1" max="365" value="7">
+                                </div>
+                            </div>
+
+                            <div id="aiAnalysisContent" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                                <i class="fas fa-robot fa-3x" style="color: #e0e0e0; margin-bottom: 20px;"></i>
+                                <p>请选择分析类型并点击相应按钮</p>
+                                <p>系统将调用阿里云百炼大模型生成专业分析报告</p>
+                            </div>
+
+                            <div id="llmAnalysisStats" class="analysis-stats" style="display: none;">
+                                <h4><i class="fas fa-chart-bar"></i> 分析统计</h4>
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-value" id="llmTotalSamples">0</div>
+                                        <div class="stat-label">分析样本</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-value" id="llmAnalysisType">未知</div>
+                                        <div class="stat-label">分析类型</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-value" id="llmTimeRange">未知</div>
+                                        <div class="stat-label">时间范围</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-value" id="llmStability">0%</div>
+                                        <div class="stat-label">情绪稳定性</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div id="aiAnalysisContent" style="text-align: center; color: #7f8c8d; padding: 40px;">
-                            <i class="fas fa-robot fa-3x" style="color: #e0e0e0; margin-bottom: 20px;"></i>
-                            <p>请选择分析类型并点击相应按钮</p>
-                            <p>系统将调用阿里云百炼大模型生成专业分析报告</p>
-                        </div>
+                        <div id="aiMarkdownPage" class="ai-subpage">
+                            <div class="llm-analysis-controls">
+                                <button class="upload-btn ai-btn" id="markdownGenerateBtn" onclick="generateMarkdownReport()">
+                                    <i class="fas fa-file-pen"></i> 生成 Markdown 报告
+                                </button>
+                                <button class="upload-btn monitor-btn" id="markdownCopyBtn" onclick="copyMarkdownReport()" disabled>
+                                    <i class="fas fa-copy"></i> 复制 Markdown
+                                </button>
+                                <div class="days-input">
+                                    <label style="display: block; margin-bottom: 5px; color: #7f8c8d; font-size: 0.9rem;">分析天数:</label>
+                                    <input type="number" id="markdownDays" min="1" max="365" value="7">
+                                </div>
+                            </div>
 
-                        <div id="llmAnalysisStats" class="analysis-stats" style="display: none;">
-                            <h4><i class="fas fa-chart-bar"></i> 分析统计</h4>
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-value" id="llmTotalSamples">0</div>
-                                    <div class="stat-label">分析样本</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="llmAnalysisType">未知</div>
-                                    <div class="stat-label">分析类型</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="llmTimeRange">未知</div>
-                                    <div class="stat-label">时间范围</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="llmStability">0%</div>
-                                    <div class="stat-label">情绪稳定性</div>
-                                </div>
+                            <div id="markdownReportContent" style="text-align: center; color: #7f8c8d; padding: 40px;">
+                                <i class="fas fa-file-lines fa-3x" style="color: #e0e0e0; margin-bottom: 20px;"></i>
+                                <p>点击“生成 Markdown 报告”调用 multiAgent 流程</p>
+                                <p>该页面将显示可读版报告，并可复制原始 Markdown</p>
+                            </div>
+
+                            <div id="markdownReportMeta" class="markdown-meta" style="display: none;">
+                                <span id="markdownSampleCount">样本: 0</span>
+                                <span style="margin: 0 10px;">|</span>
+                                <span id="markdownOutputFile">文件: -</span>
                             </div>
                         </div>
                     </div>
@@ -1129,6 +1229,8 @@
                 'monitorAnalysisBtn',
                 'detailedReportBtn',
                 'llmAnalysisDays',
+                'markdownGenerateBtn',
+                'markdownReportContent',
                 'llmTotalSamples',
                 'llmAnalysisType',
                 'llmTimeRange',
@@ -1567,12 +1669,18 @@
             try {
                 showStatus(`正在生成${getAnalysisTypeName(analysisType)}...`, 'success');
 
+                const isMultiAgentReport = analysisType === 'detailed_report';
+                const endpoint = isMultiAgentReport ? '/multi_agent_analysis' : '/comprehensive_analysis';
+
                 // 构建请求体
-                const requestBody = {
+                const requestBody = isMultiAgentReport ? {
+                    days: days,
+                    user_context: userContext
+                } : {
                     use_history: true,
                     analysis_type: analysisType,
                     days: days,
-                    user_context: userContext  // 包含用户上下文
+                    user_context: userContext
                 };
 
                 console.log("发送综合分析请求:", {
@@ -1581,7 +1689,7 @@
                     userContext: userContext
                 });
 
-                const response = await fetch(`${API_BASE_URL}/comprehensive_analysis`, {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1709,6 +1817,62 @@
                 return;
             }
 
+            const isMultiAgentResult = analysisType === 'detailed_report' && typeof result.report_markdown === 'string';
+            if (isMultiAgentResult) {
+                const rendered = renderSimpleMarkdown(result.report_markdown);
+
+                if (llmTotalSamples) {
+                    llmTotalSamples.textContent = result.total_samples || 0;
+                }
+                if (llmAnalysisType) {
+                    llmAnalysisType.textContent = '多智能体详细报告';
+                }
+                if (llmTimeRange) {
+                    llmTimeRange.textContent = '按所选天数生成';
+                }
+                if (llmStability) {
+                    llmStability.textContent = '--';
+                }
+                if (llmAnalysisStats) {
+                    llmAnalysisStats.style.display = 'block';
+                }
+                if (modelTag) {
+                    modelTag.style.background = '#16a085';
+                    modelTag.innerHTML = '<i class="fas fa-users"></i> multiAgent';
+                }
+
+                aiAnalysisContent.innerHTML = `
+                    <div style="background: #e8f9f4; padding: 25px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #16a085;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0; color: #1f3a56; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-users"></i> 详细报告 - 多智能体生成
+                            </h4>
+                            <span style="background: #16a085; color: white; padding: 5px 10px; border-radius: 15px; font-size: 0.9em;">multiAgent</span>
+                        </div>
+                        <div class="llm-response-box">${rendered}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (analysisType === 'detailed_report') {
+                if (modelTag) {
+                    modelTag.style.background = '#e67e22';
+                    modelTag.innerHTML = '<i class="fas fa-triangle-exclamation"></i> 路由异常';
+                }
+                if (llmAnalysisStats) {
+                    llmAnalysisStats.style.display = 'none';
+                }
+                aiAnalysisContent.innerHTML = `
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 12px; border: 1px solid #ffe08a; color: #7a5b00;">
+                        <h4 style="margin: 0 0 10px;"><i class="fas fa-info-circle"></i> 详细报告应由多智能体生成</h4>
+                        <p style="margin: 0 0 8px;">当前返回数据不是 multiAgent 的 Markdown 结构（缺少 report_markdown）。</p>
+                        <p style="margin: 0;">请强制刷新页面（Ctrl+F5）后重试；若仍异常，请检查浏览器缓存和前端是否加载最新文件。</p>
+                    </div>
+                `;
+                return;
+            }
+
             const data = result.data || {};
             const llmResponse = data.llm_response || {};
             const algorithmAnalysis = data.algorithm_analysis || {};
@@ -1744,6 +1908,8 @@
                 if (usingAlgorithm) {
                     modelTag.style.background = '#ff6b6b';
                     modelTag.innerHTML = '<i class="fas fa-calculator"></i> 算法生成';
+                } else {
+                    modelTag.style.background = '#3498db';
                 }
             }
 
@@ -1755,7 +1921,7 @@
 
             if (llmResponse.success && llmResponse.raw_response) {
                 // 大模型响应
-                displayContent = llmResponse.raw_response;
+                displayContent = renderSimpleMarkdown(llmResponse.raw_response);
                 isAlgorithmBased = false;
             } else if (algorithmAnalysis && Object.keys(algorithmAnalysis).length > 0) {
                 // 算法生成的分析
@@ -1995,12 +2161,18 @@ async function getComprehensiveAnalysis(analysisType) {
     try {
         showStatus(`正在生成${getAnalysisTypeName(analysisType)}...`, 'success');
 
+        const isMultiAgentReport = analysisType === 'detailed_report';
+        const endpoint = isMultiAgentReport ? '/multi_agent_analysis' : '/comprehensive_analysis';
+
         // 构建请求体
-        const requestBody = {
+        const requestBody = isMultiAgentReport ? {
+            days: days,
+            user_context: userContext
+        } : {
             use_history: true,
             analysis_type: analysisType,
             days: days,
-            user_context: userContext  // 包含用户上下文
+            user_context: userContext
         };
 
         console.log("发送综合分析请求:", {
@@ -2009,7 +2181,7 @@ async function getComprehensiveAnalysis(analysisType) {
             userContext: userContext
         });
 
-        const response = await fetch(`${API_BASE_URL}/comprehensive_analysis`, {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -2125,6 +2297,249 @@ function getAnalysisTypeName(type) {
         'detailed_report': '详细报告'
     };
     return names[type] || type;
+}
+
+async function getDetailedReportByMultiAgent() {
+    const days = parseInt(document.getElementById('llmAnalysisDays').value, 10) || 7;
+
+    const userContext = {
+        age_group: document.getElementById('ageGroup').value,
+        stress_level: document.getElementById('stressLevel').value,
+        has_support_system: document.getElementById('hasSupport').value === 'true',
+        is_first_time: document.getElementById('isFirstTime').value === 'true'
+    };
+
+    const healthAdviceBtn = document.getElementById('healthAdviceBtn');
+    const monitorAnalysisBtn = document.getElementById('monitorAnalysisBtn');
+    const detailedReportBtn = document.getElementById('detailedReportBtn');
+
+    if (!healthAdviceBtn || !monitorAnalysisBtn || !detailedReportBtn) {
+        showStatus('分析按钮未找到，请刷新页面', 'error');
+        return;
+    }
+
+    const originalTexts = {
+        healthAdviceBtn: healthAdviceBtn.innerHTML,
+        monitorAnalysisBtn: monitorAnalysisBtn.innerHTML,
+        detailedReportBtn: detailedReportBtn.innerHTML
+    };
+
+    healthAdviceBtn.disabled = true;
+    monitorAnalysisBtn.disabled = true;
+    detailedReportBtn.disabled = true;
+    detailedReportBtn.innerHTML = '<div class="loading"></div> 多智能体生成中...';
+
+    try {
+        showStatus('正在使用多智能体生成详细报告...', 'success');
+
+        const response = await fetch(`${API_BASE_URL}/multi_agent_analysis`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                days: days,
+                user_context: userContext
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`服务器错误: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || '多智能体报告生成失败');
+        }
+
+        displayLLMAnalysis(result, 'detailed_report');
+        showStatus('多智能体详细报告生成完成！', 'success');
+    } catch (error) {
+        console.error('多智能体详细报告失败:', error);
+        showStatus(`多智能体详细报告失败: ${error.message}`, 'error');
+
+        const aiAnalysisContent = document.getElementById('aiAnalysisContent');
+        if (aiAnalysisContent) {
+            aiAnalysisContent.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: #f8d7da; border-radius: 12px; border: 2px solid #f5c6cb;">
+                    <i class="fas fa-exclamation-triangle fa-3x" style="color: #721c24; margin-bottom: 20px;"></i>
+                    <h3 style="color: #721c24;">多智能体报告生成失败</h3>
+                    <p style="color: #721c24;">${escapeHtml(error.message || '未知错误')}</p>
+                    <div style="margin-top: 14px; color: #7f8c8d;">请检查后端日志和 DEEPSEEK_API_KEY 配置。</div>
+                </div>
+            `;
+        }
+    } finally {
+        healthAdviceBtn.innerHTML = originalTexts.healthAdviceBtn;
+        healthAdviceBtn.disabled = false;
+        monitorAnalysisBtn.innerHTML = originalTexts.monitorAnalysisBtn;
+        monitorAnalysisBtn.disabled = false;
+        detailedReportBtn.innerHTML = originalTexts.detailedReportBtn;
+        detailedReportBtn.disabled = false;
+    }
+}
+
+let latestMarkdownReport = '';
+
+function switchAiSubPage(pageId, eventObj) {
+    document.querySelectorAll('.ai-subpage-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.ai-subpage').forEach(page => page.classList.remove('active'));
+
+    if (eventObj && eventObj.currentTarget) {
+        eventObj.currentTarget.classList.add('active');
+    }
+
+    const pageEl = document.getElementById(pageId);
+    if (pageEl) {
+        pageEl.classList.add('active');
+    }
+}
+
+function escapeHtml(text) {
+    return (text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderSimpleMarkdown(md) {
+    let html = escapeHtml(md || '');
+
+    html = html
+        .replace(/^###\s+(.*)$/gm, '<h3>$1</h3>')
+        .replace(/^##\s+(.*)$/gm, '<h2>$1</h2>')
+        .replace(/^#\s+(.*)$/gm, '<h1>$1</h1>')
+        .replace(/^>\s+(.*)$/gm, '<blockquote>$1</blockquote>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    const lines = html.split('\n');
+    let inList = false;
+    const out = [];
+
+    for (const line of lines) {
+        if (/^\s*[-*]\s+/.test(line)) {
+            if (!inList) {
+                out.push('<ul>');
+                inList = true;
+            }
+            out.push(`<li>${line.replace(/^\s*[-*]\s+/, '')}</li>`);
+        } else {
+            if (inList) {
+                out.push('</ul>');
+                inList = false;
+            }
+            if (line.trim()) {
+                if (/^<h[1-3]>|^<blockquote>|^<ul>|^<\/ul>|^<li>|^<code>/.test(line.trim())) {
+                    out.push(line);
+                } else {
+                    out.push(`<p>${line}</p>`);
+                }
+            }
+        }
+    }
+    if (inList) {
+        out.push('</ul>');
+    }
+
+    return out.join('');
+}
+
+function copyMarkdownReport() {
+    if (!latestMarkdownReport) {
+        showStatus('当前没有可复制的 Markdown 报告', 'error');
+        return;
+    }
+
+    navigator.clipboard.writeText(latestMarkdownReport)
+        .then(() => showStatus('Markdown 报告已复制到剪贴板', 'success'))
+        .catch(() => showStatus('复制失败，请手动复制', 'error'));
+}
+
+async function generateMarkdownReport() {
+    const generateBtn = document.getElementById('markdownGenerateBtn');
+    const copyBtn = document.getElementById('markdownCopyBtn');
+    const contentEl = document.getElementById('markdownReportContent');
+    const metaEl = document.getElementById('markdownReportMeta');
+    const sampleEl = document.getElementById('markdownSampleCount');
+    const fileEl = document.getElementById('markdownOutputFile');
+    const days = parseInt(document.getElementById('markdownDays').value, 10) || 7;
+
+    const userContext = {
+        age_group: document.getElementById('ageGroup').value,
+        stress_level: document.getElementById('stressLevel').value,
+        has_support_system: document.getElementById('hasSupport').value === 'true',
+        is_first_time: document.getElementById('isFirstTime').value === 'true'
+    };
+
+    if (!generateBtn || !contentEl) {
+        showStatus('Markdown 页面元素不存在，请刷新页面', 'error');
+        return;
+    }
+
+    const originalText = generateBtn.innerHTML;
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<div class="loading"></div> 生成中...';
+    if (copyBtn) copyBtn.disabled = true;
+
+    contentEl.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: #5f6f82;">
+            <i class="fas fa-robot fa-spin fa-2x" style="margin-bottom: 14px;"></i>
+            <p>正在调用 multiAgent 生成 Markdown 报告...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/multi_agent_analysis`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                days: days,
+                user_context: userContext
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`服务器错误: ${response.status} - ${errText}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Markdown 报告生成失败');
+        }
+
+        latestMarkdownReport = result.report_markdown || '';
+        const rendered = renderSimpleMarkdown(latestMarkdownReport);
+
+        contentEl.innerHTML = `
+            <div class="markdown-report-box">${rendered}</div>
+        `;
+
+        if (sampleEl) sampleEl.textContent = `样本: ${result.total_samples || 0}`;
+        if (fileEl) fileEl.textContent = `文件: ${result.output_file || '-'}`;
+        if (metaEl) metaEl.style.display = 'block';
+        if (copyBtn) copyBtn.disabled = !latestMarkdownReport;
+
+        showStatus('AI_Markdown 报告生成完成', 'success');
+    } catch (error) {
+        console.error('生成 Markdown 报告失败:', error);
+        const msg = error.message || '未知错误';
+        contentEl.innerHTML = `
+            <div style="background: #fff0f0; border: 1px solid #f6c9c9; border-radius: 10px; padding: 16px; color: #8d2f2f;">
+                <h4 style="margin: 0 0 8px;">AI_Markdown 报告生成失败</h4>
+                <p style="margin: 0;">${escapeHtml(msg)}</p>
+            </div>
+        `;
+        showStatus(`AI_Markdown 报告生成失败: ${msg}`, 'error');
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = originalText;
+    }
 }
 
         function generateEmotionDistributionHTML(distribution, total) {
